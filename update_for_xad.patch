@@ -1,0 +1,3952 @@
+From 89ddb15559ea95ab900ca239783310cf88719a88 Mon Sep 17 00:00:00 2001
+From: r5by <dllizhongwei@gmail.com>
+Date: Mon, 2 Sep 2024 16:30:46 +0800
+Subject: [PATCH] Add clang/backend support for xad bluedotv1 arch
+
+---
+ .gitignore                                    |   2 +
+ clang/include/clang/Basic/TargetInfo.h        |   9 +-
+ clang/include/clang/Driver/Options.td         |   5 +
+ clang/lib/AST/ASTContext.cpp                  |  43 ++
+ clang/lib/Basic/CMakeLists.txt                |   1 +
+ clang/lib/Basic/Targets.cpp                   |  48 ++-
+ clang/lib/Basic/Targets/XAD.cpp               | 153 +++++++
+ clang/lib/Basic/Targets/XAD.h                 |  55 +++
+ clang/lib/CodeGen/CMakeLists.txt              |   1 +
+ clang/lib/CodeGen/TargetInfo.h                |   3 +
+ clang/lib/CodeGen/Targets/XAD.cpp             |  51 +++
+ clang/lib/Driver/CMakeLists.txt               |   1 +
+ clang/lib/Driver/ToolChains/Arch/XAD.cpp      |  81 ++++
+ clang/lib/Driver/ToolChains/Arch/XAD.h        |  43 ++
+ llvm/CMakeLists.txt                           |   3 +-
+ llvm/include/llvm/BinaryFormat/ELF.h          |  11 +
+ .../llvm/BinaryFormat/ELFRelocs/XAD.def       |  75 ++++
+ llvm/include/llvm/MC/MCELFObjectWriter.h      |   2 +
+ llvm/include/llvm/Object/ELFObjectFile.h      |   6 +
+ llvm/include/llvm/TargetParser/Triple.h       |   5 +
+ llvm/lib/Object/ELF.cpp                       |   7 +
+ llvm/lib/Object/ELFObjectFile.cpp             |   4 +
+ llvm/lib/ObjectYAML/ELFYAML.cpp               |   3 +
+ llvm/lib/Target/XAD/AsmParser/CMakeLists.txt  |  13 +
+ .../lib/Target/XAD/AsmParser/XADAsmParser.cpp | 375 +++++++++++++++++
+ llvm/lib/Target/XAD/CMakeLists.txt            |  48 +++
+ .../Target/XAD/Disassembler/CMakeLists.txt    |  13 +
+ .../XAD/Disassembler/XADDisassembler.cpp      |  98 +++++
+ .../Target/XAD/MCTargetDesc/CMakeLists.txt    |  14 +
+ .../XAD/MCTargetDesc/XADInstPrinter.cpp       |  65 +++
+ .../Target/XAD/MCTargetDesc/XADInstPrinter.h  |  51 +++
+ .../Target/XAD/MCTargetDesc/XADMCAsmInfo.cpp  |  30 ++
+ .../Target/XAD/MCTargetDesc/XADMCAsmInfo.h    |  25 ++
+ .../XAD/MCTargetDesc/XADMCCodeEmitter.cpp     |  94 +++++
+ .../XAD/MCTargetDesc/XADMCTargetDesc.cpp      |  86 ++++
+ .../Target/XAD/MCTargetDesc/XADMCTargetDesc.h |  48 +++
+ llvm/lib/Target/XAD/TargetInfo/CMakeLists.txt |   9 +
+ .../Target/XAD/TargetInfo/XADTargetInfo.cpp   |  22 +
+ .../lib/Target/XAD/TargetInfo/XADTargetInfo.h |  20 +
+ llvm/lib/Target/XAD/XAD.h                     |  36 ++
+ llvm/lib/Target/XAD/XAD.td                    |  48 +++
+ llvm/lib/Target/XAD/XADAsmPrinter.cpp         |  60 +++
+ llvm/lib/Target/XAD/XADCallingConv.td         |  36 ++
+ llvm/lib/Target/XAD/XADFrameLowering.cpp      |  33 ++
+ llvm/lib/Target/XAD/XADFrameLowering.h        |  33 ++
+ llvm/lib/Target/XAD/XADISelDAGToDAG.cpp       |  67 +++
+ llvm/lib/Target/XAD/XADISelLowering.cpp       | 396 ++++++++++++++++++
+ llvm/lib/Target/XAD/XADISelLowering.h         |  85 ++++
+ llvm/lib/Target/XAD/XADInstrFormats.td        |  76 ++++
+ llvm/lib/Target/XAD/XADInstrInfo.cpp          |  64 +++
+ llvm/lib/Target/XAD/XADInstrInfo.h            |  50 +++
+ llvm/lib/Target/XAD/XADInstrInfo.td           |  55 +++
+ llvm/lib/Target/XAD/XADMCInstLower.cpp        |  40 ++
+ llvm/lib/Target/XAD/XADMCInstLower.h          |  32 ++
+ llvm/lib/Target/XAD/XADRegisterInfo.cpp       |  59 +++
+ llvm/lib/Target/XAD/XADRegisterInfo.h         |  46 ++
+ llvm/lib/Target/XAD/XADRegisterInfo.td        |  56 +++
+ llvm/lib/Target/XAD/XADSubtarget.cpp          |  36 ++
+ llvm/lib/Target/XAD/XADSubtarget.h            |  77 ++++
+ llvm/lib/Target/XAD/XADTargetMachine.cpp      | 125 ++++++
+ llvm/lib/Target/XAD/XADTargetMachine.h        |  50 +++
+ llvm/lib/TargetParser/Triple.cpp              |   9 +
+ llvm/utils/TableGen/SubtargetEmitter.cpp      |   4 +-
+ 63 files changed, 3172 insertions(+), 24 deletions(-)
+ create mode 100644 clang/lib/Basic/Targets/XAD.cpp
+ create mode 100644 clang/lib/Basic/Targets/XAD.h
+ create mode 100644 clang/lib/CodeGen/Targets/XAD.cpp
+ create mode 100644 clang/lib/Driver/ToolChains/Arch/XAD.cpp
+ create mode 100644 clang/lib/Driver/ToolChains/Arch/XAD.h
+ create mode 100644 llvm/include/llvm/BinaryFormat/ELFRelocs/XAD.def
+ create mode 100644 llvm/lib/Target/XAD/AsmParser/CMakeLists.txt
+ create mode 100644 llvm/lib/Target/XAD/AsmParser/XADAsmParser.cpp
+ create mode 100644 llvm/lib/Target/XAD/CMakeLists.txt
+ create mode 100644 llvm/lib/Target/XAD/Disassembler/CMakeLists.txt
+ create mode 100644 llvm/lib/Target/XAD/Disassembler/XADDisassembler.cpp
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/CMakeLists.txt
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.cpp
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.h
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.cpp
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.h
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADMCCodeEmitter.cpp
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.cpp
+ create mode 100644 llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.h
+ create mode 100644 llvm/lib/Target/XAD/TargetInfo/CMakeLists.txt
+ create mode 100644 llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.cpp
+ create mode 100644 llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.h
+ create mode 100644 llvm/lib/Target/XAD/XAD.h
+ create mode 100644 llvm/lib/Target/XAD/XAD.td
+ create mode 100644 llvm/lib/Target/XAD/XADAsmPrinter.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADCallingConv.td
+ create mode 100644 llvm/lib/Target/XAD/XADFrameLowering.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADFrameLowering.h
+ create mode 100644 llvm/lib/Target/XAD/XADISelDAGToDAG.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADISelLowering.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADISelLowering.h
+ create mode 100644 llvm/lib/Target/XAD/XADInstrFormats.td
+ create mode 100644 llvm/lib/Target/XAD/XADInstrInfo.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADInstrInfo.h
+ create mode 100644 llvm/lib/Target/XAD/XADInstrInfo.td
+ create mode 100644 llvm/lib/Target/XAD/XADMCInstLower.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADMCInstLower.h
+ create mode 100644 llvm/lib/Target/XAD/XADRegisterInfo.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADRegisterInfo.h
+ create mode 100644 llvm/lib/Target/XAD/XADRegisterInfo.td
+ create mode 100644 llvm/lib/Target/XAD/XADSubtarget.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADSubtarget.h
+ create mode 100644 llvm/lib/Target/XAD/XADTargetMachine.cpp
+ create mode 100644 llvm/lib/Target/XAD/XADTargetMachine.h
+
+diff --git a/.gitignore b/.gitignore
+index 20c4f52cd378..16fde1e61100 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -70,3 +70,5 @@ pythonenv*
+ /clang/utils/analyzer/projects/*/RefScanBuildResults
+ # automodapi puts generated documentation files here.
+ /lldb/docs/python_api/
++
++tests
+diff --git a/clang/include/clang/Basic/TargetInfo.h b/clang/include/clang/Basic/TargetInfo.h
+index 61be52149341..da67dfffbd31 100644
+--- a/clang/include/clang/Basic/TargetInfo.h
++++ b/clang/include/clang/Basic/TargetInfo.h
+@@ -337,7 +337,14 @@ public:
+     //    void *__saved_reg_area_end_pointer;
+     //    void *__overflow_area_pointer;
+     //} va_list;
+-    HexagonBuiltinVaList
++    HexagonBuiltinVaList,
++
++    // typedef struct __va_list_tag {
++    //    int __va_arg;
++    //    int *__va_stk;
++    //    int *__va_reg;
++    //} va_list;
++    XADBuiltinVaList
+   };
+ 
+ protected:
+diff --git a/clang/include/clang/Driver/Options.td b/clang/include/clang/Driver/Options.td
+index 37e8c56b2d29..45fdcc6475c1 100644
+--- a/clang/include/clang/Driver/Options.td
++++ b/clang/include/clang/Driver/Options.td
+@@ -178,6 +178,8 @@ def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
+                                    Group<m_Group>, DocName<"Hexagon">;
+ def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
+                            Group<m_Group>, DocName<"M68k">;
++def m_xad_Features_Group: OptionGroup<"<xad features group>">,
++                           Group<m_Group>, DocName<"XAD">;
+ def m_mips_Features_Group : OptionGroup<"<mips features group>">,
+                             Group<m_Group>, DocName<"MIPS">;
+ def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
+@@ -4877,6 +4879,9 @@ foreach i = {0-7} in
+     HelpText<"Reserve the d"#i#" register (M68k only)">;
+ } // let Flags = [TargetSpecific]
+ 
++// XAD features flags
++def bluedot : Flag<["-"], "bluedot">, Group<m_xad_Features_Group>;
++
+ // X86 feature flags
+ def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
+ def mno_x87 : Flag<["-"], "mno-x87">, Group<m_x86_Features_Group>;
+diff --git a/clang/lib/AST/ASTContext.cpp b/clang/lib/AST/ASTContext.cpp
+index 76000156fece..1979e739d41b 100644
+--- a/clang/lib/AST/ASTContext.cpp
++++ b/clang/lib/AST/ASTContext.cpp
+@@ -9115,6 +9115,47 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
+   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
+ }
+ 
++static TypedefDecl *CreateXADBuiltinVaListDecl(const ASTContext *Context) {
++  // typedef struct __va_list_tag {
++  RecordDecl *VaListTagDecl;
++  VaListTagDecl = Context->buildImplicitRecord("__va_list_tag");
++  VaListTagDecl->startDefinition();
++
++  const size_t NumFields = 3;
++  QualType FieldTypes[NumFields];
++  const char *FieldNames[NumFields];
++
++  //   int __va_arg;
++  FieldTypes[0] = Context->IntTy;
++  FieldNames[0] = "__va_arg";
++
++  //   int *__va_stk;
++  FieldTypes[1] = Context->getPointerType(Context->IntTy);
++  FieldNames[1] = "__va_stk";
++
++  //   int *__va_reg;
++  FieldTypes[2] = Context->getPointerType(Context->IntTy);
++  FieldNames[2] = "__va_reg";
++
++  // Create fields
++  for (unsigned i = 0; i < NumFields; ++i) {
++    FieldDecl *Field = FieldDecl::Create(
++        const_cast<ASTContext &>(*Context), VaListTagDecl, SourceLocation(),
++        SourceLocation(), &Context->Idents.get(FieldNames[i]), FieldTypes[i],
++        /*TInfo=*/0,
++        /*BitWidth=*/0,
++        /*Mutable=*/false, ICIS_NoInit);
++    Field->setAccess(AS_public);
++    VaListTagDecl->addDecl(Field);
++  }
++  VaListTagDecl->completeDefinition();
++  Context->VaListTagDecl = VaListTagDecl;
++  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
++
++  // } __builtin_va_list;
++  return Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
++}
++
+ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
+                                      TargetInfo::BuiltinVaListKind Kind) {
+   switch (Kind) {
+@@ -9136,6 +9177,8 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
+     return CreateSystemZBuiltinVaListDecl(Context);
+   case TargetInfo::HexagonBuiltinVaList:
+     return CreateHexagonBuiltinVaListDecl(Context);
++  case TargetInfo::XADBuiltinVaList:
++    return CreateXADBuiltinVaListDecl(Context);
+   }
+ 
+   llvm_unreachable("Unhandled __builtin_va_list type kind");
+diff --git a/clang/lib/Basic/CMakeLists.txt b/clang/lib/Basic/CMakeLists.txt
+index caa1b6002e6f..caa348971c2d 100644
+--- a/clang/lib/Basic/CMakeLists.txt
++++ b/clang/lib/Basic/CMakeLists.txt
+@@ -100,6 +100,7 @@ add_clang_library(clangBasic
+   Targets/Le64.cpp
+   Targets/LoongArch.cpp
+   Targets/M68k.cpp
++  Targets/XAD.cpp
+   Targets/MSP430.cpp
+   Targets/Mips.cpp
+   Targets/NVPTX.cpp
+diff --git a/clang/lib/Basic/Targets.cpp b/clang/lib/Basic/Targets.cpp
+index 636b59fd1272..d463e4905a94 100644
+--- a/clang/lib/Basic/Targets.cpp
++++ b/clang/lib/Basic/Targets.cpp
+@@ -26,6 +26,7 @@
+ #include "Targets/Le64.h"
+ #include "Targets/LoongArch.h"
+ #include "Targets/M68k.h"
++#include "Targets/XAD.h"
+ #include "Targets/MSP430.h"
+ #include "Targets/Mips.h"
+ #include "Targets/NVPTX.h"
+@@ -349,6 +350,14 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
+       return std::make_unique<M68kTargetInfo>(Triple, Opts);
+     }
+ 
++  case llvm::Triple::xad:
++    switch (os) {
++    case llvm::Triple::OpenBSD:
++      return std::make_unique<OpenBSDTargetInfo<XADTargetInfo>>(Triple, Opts);
++      default:
++      return std::make_unique<XADTargetInfo>(Triple, Opts);
++    }
++
+   case llvm::Triple::le32:
+     switch (os) {
+     case llvm::Triple::NaCl:
+@@ -695,17 +704,17 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
+         !Triple.isOSBinFormatWasm())
+       return nullptr;
+     switch (os) {
+-      case llvm::Triple::WASI:
++    case llvm::Triple::WASI:
+       return std::make_unique<WASITargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                        Opts);
+-      case llvm::Triple::Emscripten:
++    case llvm::Triple::Emscripten:
+       return std::make_unique<EmscriptenTargetInfo<WebAssembly32TargetInfo>>(
+           Triple, Opts);
+-      case llvm::Triple::UnknownOS:
++    case llvm::Triple::UnknownOS:
+       return std::make_unique<WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>>(
+           Triple, Opts);
+-      default:
+-        return nullptr;
++    default:
++      return nullptr;
+     }
+   case llvm::Triple::wasm64:
+     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
+@@ -713,17 +722,17 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
+         !Triple.isOSBinFormatWasm())
+       return nullptr;
+     switch (os) {
+-      case llvm::Triple::WASI:
++    case llvm::Triple::WASI:
+       return std::make_unique<WASITargetInfo<WebAssembly64TargetInfo>>(Triple,
+                                                                        Opts);
+-      case llvm::Triple::Emscripten:
++    case llvm::Triple::Emscripten:
+       return std::make_unique<EmscriptenTargetInfo<WebAssembly64TargetInfo>>(
+           Triple, Opts);
+-      case llvm::Triple::UnknownOS:
++    case llvm::Triple::UnknownOS:
+       return std::make_unique<WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>>(
+           Triple, Opts);
+-      default:
+-        return nullptr;
++    default:
++      return nullptr;
+     }
+ 
+   case llvm::Triple::dxil:
+@@ -741,25 +750,25 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
+   case llvm::Triple::csky:
+     switch (os) {
+     case llvm::Triple::Linux:
+-        return std::make_unique<LinuxTargetInfo<CSKYTargetInfo>>(Triple, Opts);
++      return std::make_unique<LinuxTargetInfo<CSKYTargetInfo>>(Triple, Opts);
+     default:
+-        return std::make_unique<CSKYTargetInfo>(Triple, Opts);
++      return std::make_unique<CSKYTargetInfo>(Triple, Opts);
+     }
+   case llvm::Triple::loongarch32:
+     switch (os) {
+     case llvm::Triple::Linux:
+-        return std::make_unique<LinuxTargetInfo<LoongArch32TargetInfo>>(Triple,
+-                                                                        Opts);
++      return std::make_unique<LinuxTargetInfo<LoongArch32TargetInfo>>(Triple,
++                                                                      Opts);
+     default:
+-        return std::make_unique<LoongArch32TargetInfo>(Triple, Opts);
++      return std::make_unique<LoongArch32TargetInfo>(Triple, Opts);
+     }
+   case llvm::Triple::loongarch64:
+     switch (os) {
+     case llvm::Triple::Linux:
+-        return std::make_unique<LinuxTargetInfo<LoongArch64TargetInfo>>(Triple,
+-                                                                        Opts);
++      return std::make_unique<LinuxTargetInfo<LoongArch64TargetInfo>>(Triple,
++                                                                      Opts);
+     default:
+-        return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);
++      return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);
+     }
+   }
+ }
+@@ -793,8 +802,7 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
+   }
+ 
+   // Check the TuneCPU name if specified.
+-  if (!Opts->TuneCPU.empty() &&
+-      !Target->isValidTuneCPUName(Opts->TuneCPU)) {
++  if (!Opts->TuneCPU.empty() && !Target->isValidTuneCPUName(Opts->TuneCPU)) {
+     Diags.Report(diag::err_target_unknown_cpu) << Opts->TuneCPU;
+     SmallVector<StringRef, 32> ValidList;
+     Target->fillValidTuneCPUList(ValidList);
+diff --git a/clang/lib/Basic/Targets/XAD.cpp b/clang/lib/Basic/Targets/XAD.cpp
+new file mode 100644
+index 000000000000..73683c1175f0
+--- /dev/null
++++ b/clang/lib/Basic/Targets/XAD.cpp
+@@ -0,0 +1,153 @@
++//===--- XAD.cpp - Implement XAD targets feature support ----------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements XAD TargetInfo objects.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XAD.h"
++#include "clang/Basic/Builtins.h"
++#include "clang/Basic/Diagnostic.h"
++#include "clang/Basic/TargetBuiltins.h"
++#include "llvm/ADT/StringExtras.h"
++#include "llvm/ADT/StringRef.h"
++#include "llvm/ADT/StringSwitch.h"
++#include "llvm/TargetParser/TargetParser.h"
++#include <cstring>
++
++using namespace clang;
++using namespace clang::targets;
++
++//static constexpr Builtin::Info BuiltinInfo[] = {
++//#define BUILTIN(ID, TYPE, ATTRS)                                               \
++//  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
++//#include "clang/Basic/BuiltinsXAD.inc"
++//};
++
++//TODO> xad specific
++XADTargetInfo::XADTargetInfo(const llvm::Triple &Triple,
++                               const TargetOptions &)
++    : TargetInfo(Triple) {
++
++  std::string Layout = "";
++
++  // M68k is Big Endian
++  Layout += "E";
++
++  // FIXME how to wire it with the used object format?
++  Layout += "-m:e";
++
++  // Pointers are 32 bit.
++  Layout += "-p:32:32:32";
++
++  // All scalar types are naturally aligned.
++  Layout += "-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64";
++
++  // Floats and doubles are also naturally aligned.
++  Layout += "-f32:32:32-f64:64:64";
++
++  // We prefer 16 bits of aligned for all globals; see above.
++  Layout += "-a:8:16";
++
++  // Integer registers are 32bits.
++  Layout += "-n32";
++
++  resetDataLayout(Layout);
++
++  IntMaxType = SignedLongLong;
++  Int64Type = SignedLongLong;
++  SizeType = UnsignedLong;
++  PtrDiffType = SignedInt;
++  IntPtrType = SignedInt;
++}
++
++bool XADTargetInfo::setCPU(const std::string &Name) {
++  StringRef N = Name;
++  CPU = llvm::StringSwitch<CPUKind>(N)
++            .Case("generic", CK_Bluedot)
++            .Case("bluedot", CK_Bluedot)
++            .Default(CK_Unknown);
++  return CPU != CK_Unknown;
++}
++
++static constexpr llvm::StringLiteral ValidCPUNames[] = {
++    {"generic"}, {"bluedot"}};
++
++void XADTargetInfo::fillValidCPUList(
++    SmallVectorImpl<StringRef> &Values) const {
++  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
++}
++
++bool XADTargetInfo::isValidCPUName(StringRef Name) const {
++  return llvm::is_contained(ValidCPUNames, Name);
++}
++
++void XADTargetInfo::getTargetDefines(const LangOptions &Opts,
++                                      MacroBuilder &Builder) const {
++  using llvm::Twine;
++
++  if (getTriple().isOSOpenBSD()) {
++    Builder.defineMacro("__xad__");
++    Builder.defineMacro("__xad");
++
++    // For sub-architecture
++    switch (CPU) {
++    case CK_Bluedot:
++      Builder.defineMacro("__bluedot__");
++      break;
++    default:
++      break;
++    }
++  }
++}
++
++ArrayRef<Builtin::Info> XADTargetInfo::getTargetBuiltins() const {
++  return std::nullopt;
++}
++
++bool XADTargetInfo::hasFeature(StringRef Feature) const {
++  // TODO Implement.
++  return Feature == "BlueDot";
++}
++
++const char *const XADTargetInfo::GCCRegNames[] = {
++    // TODO Extended registers, control registers.
++    "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",  "r9",  "r10",
++    "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20", "r21",
++    "r22", "r23", "r24", "r25", "r26", "r27", "r28", "r29", "r39", "r31"};
++
++ArrayRef<const char *> XADTargetInfo::getGCCRegNames() const {
++  return ArrayRef(GCCRegNames);
++}
++
++ArrayRef<TargetInfo::GCCRegAlias> XADTargetInfo::getGCCRegAliases() const {
++  // No aliases.
++  return std::nullopt;
++}
++
++bool XADTargetInfo::validateAsmConstraint(
++    const char *&Name, TargetInfo::ConstraintInfo &info) const {
++  // TODO Implement.
++  switch (*Name) {
++  case 'a': // address register
++  case 'd': // data register
++  case 'f': // floating point register
++    info.setAllowsRegister();
++    return true;
++  case 'K': // the constant 1
++  case 'L': // constant -1^20 .. 1^19
++  case 'M': // constant 1-4:
++    return true;
++  }
++  return false;
++}
++
++std::string_view XADTargetInfo::getClobbers() const {
++  // TODO Implement.
++  return "";
++}
+\ No newline at end of file
+diff --git a/clang/lib/Basic/Targets/XAD.h b/clang/lib/Basic/Targets/XAD.h
+new file mode 100644
+index 000000000000..58d8e99313aa
+--- /dev/null
++++ b/clang/lib/Basic/Targets/XAD.h
+@@ -0,0 +1,55 @@
++//===--- XAD.h - Declare XAD target feature support ---------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file declares XAD TargetInfo objects.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_CLANG_LIB_BASIC_TARGETS_XAD_H
++#define LLVM_CLANG_LIB_BASIC_TARGETS_XAD_H
++
++#include "OSTargets.h"
++#include "clang/Basic/TargetInfo.h"
++#include "clang/Basic/TargetOptions.h"
++#include "llvm/Support/Compiler.h"
++#include "llvm/TargetParser/Triple.h"
++
++namespace clang {
++namespace targets {
++
++class LLVM_LIBRARY_VISIBILITY XADTargetInfo : public TargetInfo {
++  static const char *const GCCRegNames[];
++
++  enum CPUKind { CK_Unknown, CK_Bluedot } CPU = CK_Unknown;
++
++public:
++  XADTargetInfo(const llvm::Triple &Triple, const TargetOptions &);
++
++  void getTargetDefines(const LangOptions &Opts,
++                        MacroBuilder &Builder) const override;
++  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
++  bool hasFeature(StringRef Feature) const override;
++  ArrayRef<const char *> getGCCRegNames() const override;
++  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
++  bool validateAsmConstraint(const char *&Name,
++                             TargetInfo::ConstraintInfo &info) const override;
++  std::string_view getClobbers() const override;
++
++  BuiltinVaListKind getBuiltinVaListKind() const override {
++    return TargetInfo::XADBuiltinVaList;
++  }
++
++  bool setCPU(const std::string &Name) override;
++  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
++  bool isValidCPUName(StringRef Name) const override;
++};
++
++} // namespace targets
++} // namespace clang
++
++#endif // LLVM_CLANG_LIB_BASIC_TARGETS_XAD_H
+\ No newline at end of file
+diff --git a/clang/lib/CodeGen/CMakeLists.txt b/clang/lib/CodeGen/CMakeLists.txt
+index 1debeb6d9cce..7e8fea4e504e 100644
+--- a/clang/lib/CodeGen/CMakeLists.txt
++++ b/clang/lib/CodeGen/CMakeLists.txt
+@@ -100,6 +100,7 @@ add_clang_library(clangCodeGen
+   Targets/Lanai.cpp
+   Targets/LoongArch.cpp
+   Targets/M68k.cpp
++  Targets/XAD.cpp
+   Targets/MSP430.cpp
+   Targets/Mips.cpp
+   Targets/NVPTX.cpp
+diff --git a/clang/lib/CodeGen/TargetInfo.h b/clang/lib/CodeGen/TargetInfo.h
+index 14ed5e5d2d2c..9a00c7ff6760 100644
+--- a/clang/lib/CodeGen/TargetInfo.h
++++ b/clang/lib/CodeGen/TargetInfo.h
+@@ -462,6 +462,9 @@ createLoongArchTargetCodeGenInfo(CodeGenModule &CGM, unsigned GRLen,
+ std::unique_ptr<TargetCodeGenInfo>
+ createM68kTargetCodeGenInfo(CodeGenModule &CGM);
+ 
++std::unique_ptr<TargetCodeGenInfo>
++createXADTargetCodeGenInfo(CodeGenModule &CGM);
++
+ std::unique_ptr<TargetCodeGenInfo>
+ createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+ 
+diff --git a/clang/lib/CodeGen/Targets/XAD.cpp b/clang/lib/CodeGen/Targets/XAD.cpp
+new file mode 100644
+index 000000000000..29b6152ff267
+--- /dev/null
++++ b/clang/lib/CodeGen/Targets/XAD.cpp
+@@ -0,0 +1,51 @@
++//===- XAD.cpp ----------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "ABIInfoImpl.h"
++#include "TargetInfo.h"
++
++using namespace clang;
++using namespace clang::CodeGen;
++
++//===----------------------------------------------------------------------===//
++// XAD ABI Implementation
++//
++// This is a very simple ABI that relies a lot on DefaultABIInfo.
++//===----------------------------------------------------------------------===//
++
++namespace {
++class XADABIInfo final : public ABIInfo {
++  DefaultABIInfo defaultInfo;
++public:
++  explicit XADABIInfo(CodeGen::CodeGenTypes &CGT)
++      : ABIInfo(CGT), defaultInfo(CGT) {}
++
++//  ABIArgInfo classifyReturnType(QualType RetTy) const;
++//  ABIArgInfo classifyArgumentType(QualType RetTy) const;
++
++  void computeInfo(CGFunctionInfo &FI) const override {}
++
++  CodeGen::Address EmitVAArg(CodeGen::CodeGenFunction &CGF,
++                   CodeGen::Address VAListAddr,
++                   QualType Ty) const override {
++    return VAListAddr;
++  }
++
++};
++
++class XADTargetCodeGenInfo final : public TargetCodeGenInfo {
++public:
++  explicit XADTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
++      : TargetCodeGenInfo(std::make_unique<XADABIInfo>(CGT)) {}
++};
++} // namespace
++
++std::unique_ptr<TargetCodeGenInfo>
++CodeGen::createXADTargetCodeGenInfo(CodeGenModule &CGM) {
++  return std::make_unique<XADTargetCodeGenInfo>(CGM.getTypes());
++}
+\ No newline at end of file
+diff --git a/clang/lib/Driver/CMakeLists.txt b/clang/lib/Driver/CMakeLists.txt
+index a6bd2d41e797..206afc02325c 100644
+--- a/clang/lib/Driver/CMakeLists.txt
++++ b/clang/lib/Driver/CMakeLists.txt
+@@ -34,6 +34,7 @@ add_clang_library(clangDriver
+   ToolChains/Arch/CSKY.cpp
+   ToolChains/Arch/LoongArch.cpp
+   ToolChains/Arch/M68k.cpp
++  ToolChains/Arch/XAD.cpp
+   ToolChains/Arch/Mips.cpp
+   ToolChains/Arch/PPC.cpp
+   ToolChains/Arch/RISCV.cpp
+diff --git a/clang/lib/Driver/ToolChains/Arch/XAD.cpp b/clang/lib/Driver/ToolChains/Arch/XAD.cpp
+new file mode 100644
+index 000000000000..c7668964570e
+--- /dev/null
++++ b/clang/lib/Driver/ToolChains/Arch/XAD.cpp
+@@ -0,0 +1,81 @@
++//===--- XAD.cpp - XAD Helpers for Tools --------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XAD.h"
++#include "ToolChains/CommonArgs.h"
++#include "clang/Driver/Driver.h"
++#include "clang/Driver/DriverDiagnostic.h"
++#include "clang/Driver/Options.h"
++#include "llvm/ADT/SmallVector.h"
++#include "llvm/ADT/StringSwitch.h"
++#include "llvm/Option/ArgList.h"
++#include "llvm/Support/Regex.h"
++#include "llvm/TargetParser/Host.h"
++#include <sstream>
++
++using namespace clang::driver;
++using namespace clang::driver::tools;
++using namespace clang;
++using namespace llvm::opt;
++
++static StringRef normalizeCPU(StringRef CPUName) {
++  if (CPUName == "native") {
++    StringRef CPU = llvm::sys::getHostCPUName();
++    if (!CPU.empty() && CPU != "generic")
++      return CPU;
++  }
++
++  return llvm::StringSwitch<StringRef>(CPUName)
++      .Cases("bluedot", "bluedotv1", "bluedot-v1", "generic")
++      .Default(CPUName);
++}
++
++/// getXADTargetCPU - Get the (LLVM) name of the bluedotv1 cpu we are targeting.
++StringRef xad::getXADTargetCPU(const ArgList &Args) {
++  // Get the last specified -mcpu= argument
++  Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
++
++  // If no argument was provided, return an empty string
++  if (!A)
++    return StringRef();
++
++  // Normalize and return the CPU name
++  return normalizeCPU(A->getValue());
++}
++
++StringRef xad::getXADTuneCPU(const ArgList &Args) {
++  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ))
++    return normalizeCPU(A->getValue());
++  return StringRef();
++}
++
++void xad::getXADTargetFeatures(const Driver &D, const llvm::Triple &Triple,
++                                 const ArgList &Args,
++                                 std::vector<StringRef> &Features) {
++  xad::FloatABI FloatABI = xad::getXADFloatABI(D, Args);
++  if (FloatABI == xad::FloatABI::Soft)
++    Features.push_back("-hard-float");
++}
++
++xad::FloatABI xad::getXADFloatABI(const Driver &D, const ArgList &Args) {
++  xad::FloatABI ABI = xad::FloatABI::Invalid;
++  if (Arg *A =
++          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float)) {
++
++    if (A->getOption().matches(options::OPT_msoft_float))
++      ABI = xad::FloatABI::Soft;
++    else if (A->getOption().matches(options::OPT_mhard_float))
++      ABI = xad::FloatABI::Hard;
++  }
++
++  // If unspecified, choose the default based on the platform.
++  if (ABI == xad::FloatABI::Invalid)
++    ABI = xad::FloatABI::Hard;
++
++  return ABI;
++}
+\ No newline at end of file
+diff --git a/clang/lib/Driver/ToolChains/Arch/XAD.h b/clang/lib/Driver/ToolChains/Arch/XAD.h
+new file mode 100644
+index 000000000000..3a6f25aaa2fe
+--- /dev/null
++++ b/clang/lib/Driver/ToolChains/Arch/XAD.h
+@@ -0,0 +1,43 @@
++//===--- XAD.h - XAD-specific Tool Helpers ------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ARCH_XAD_H
++#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ARCH_XAD_H
++
++#include "clang/Driver/Driver.h"
++#include "llvm/ADT/StringRef.h"
++#include "llvm/Option/Option.h"
++#include <string>
++#include <vector>
++
++namespace clang {
++namespace driver {
++namespace tools {
++namespace xad {
++
++enum class FloatABI {
++  Invalid,
++  Soft,
++  Hard,
++};
++
++FloatABI getXADFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
++
++StringRef getXADTargetCPU(const llvm::opt::ArgList &Args);
++StringRef getXADTuneCPU(const llvm::opt::ArgList &Args);
++
++void getXADTargetFeatures(const Driver &D, const llvm::Triple &Triple,
++                           const llvm::opt::ArgList &Args,
++                           std::vector<llvm::StringRef> &Features);
++
++} // end namespace xad
++} // end namespace tools
++} // end namespace driver
++} // end namespace clang
++
++#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ARCH_XAD_H
+\ No newline at end of file
+diff --git a/llvm/CMakeLists.txt b/llvm/CMakeLists.txt
+index 79de9eb2e3e7..97021fc05dee 100644
+--- a/llvm/CMakeLists.txt
++++ b/llvm/CMakeLists.txt
+@@ -453,6 +453,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
+   CSKY
+   DirectX
+   M68k
++  XAD
+   SPIRV
+   Xtensa
+ )
+@@ -463,7 +464,7 @@ set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
+ set(LLVM_TARGETS_TO_BUILD "all"
+     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+ 
+-set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ""
++set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "XAD"
+     CACHE STRING "Semicolon-separated list of experimental targets to build, or \"all\".")
+ 
+ option(BUILD_SHARED_LIBS
+diff --git a/llvm/include/llvm/BinaryFormat/ELF.h b/llvm/include/llvm/BinaryFormat/ELF.h
+index f5a7cdb387a6..e1a4e39f3861 100644
+--- a/llvm/include/llvm/BinaryFormat/ELF.h
++++ b/llvm/include/llvm/BinaryFormat/ELF.h
+@@ -136,6 +136,7 @@ enum {
+   EM_386 = 3,            // Intel 386
+   EM_68K = 4,            // Motorola 68000
+   EM_88K = 5,            // Motorola 88000
++  EM_XAD = 666,          // XAD 
+   EM_IAMCU = 6,          // Intel MCU
+   EM_860 = 7,            // Intel 80860
+   EM_MIPS = 8,           // MIPS R3000
+@@ -503,6 +504,16 @@ enum {
+ #include "ELFRelocs/AVR.def"
+ };
+ 
++//todo XAD Specific e_flags
++enum : unsigned {
++  EF_XAD_NABI = 0x80000000,   // Not ABI compliant
++};
++
++// XAD relocations.
++enum {
++#include "ELFRelocs/XAD.def"
++};
++
+ // Mips Specific e_flags
+ enum : unsigned {
+   EF_MIPS_NOREORDER = 0x00000001, // Don't reorder instructions
+diff --git a/llvm/include/llvm/BinaryFormat/ELFRelocs/XAD.def b/llvm/include/llvm/BinaryFormat/ELFRelocs/XAD.def
+new file mode 100644
+index 000000000000..5b0914cdf5cb
+--- /dev/null
++++ b/llvm/include/llvm/BinaryFormat/ELFRelocs/XAD.def
+@@ -0,0 +1,75 @@
++
++#ifndef ELF_RELOC
++#error "ELF_RELOC must be defined"
++#endif
++
++// Based on:
++// SYSTEM V APPLICATION BINARY INTERFACE, Motorola 88000 Processor Supplement
++// See: https://archive.org/details/bitsavers_attunixSysa0138776555SystemVRelease488000ABI1990_8011463
++
++ELF_RELOC(R_XAD_NONE, 0)
++ELF_RELOC(R_XAD_COPY, 1)
++ELF_RELOC(R_XAD_GOTP_ENT, 2)
++ELF_RELOC(R_XAD_8, 4)
++ELF_RELOC(R_XAD_8S, 5)
++ELF_RELOC(R_XAD_16S, 7)
++ELF_RELOC(R_XAD_DISP16, 8)
++ELF_RELOC(R_XAD_DISP26, 10)
++ELF_RELOC(R_XAD_PLT_DISP26, 14)
++ELF_RELOC(R_XAD_BBASED_32, 16)
++ELF_RELOC(R_XAD_BBASED_32UA, 17)
++ELF_RELOC(R_XAD_BBASED_16H, 18)
++ELF_RELOC(R_XAD_BBASED_16L, 19)
++ELF_RELOC(R_XAD_ABDIFF_32, 24)
++ELF_RELOC(R_XAD_ABDIFF_32UA, 25)
++ELF_RELOC(R_XAD_ABDIFF_16H, 26)
++ELF_RELOC(R_XAD_ABDIFF_16L, 27)
++ELF_RELOC(R_XAD_ABDIFF_16, 28)
++ELF_RELOC(R_XAD_32, 32)
++ELF_RELOC(R_XAD_32UA, 33)
++ELF_RELOC(R_XAD_16H, 34)
++ELF_RELOC(R_XAD_16L, 35)
++ELF_RELOC(R_XAD_16, 36)
++ELF_RELOC(R_XAD_GOT_32, 40)
++ELF_RELOC(R_XAD_GOT_32UA, 41)
++ELF_RELOC(R_XAD_GOT_16H, 42)
++ELF_RELOC(R_XAD_GOT_16L, 43)
++ELF_RELOC(R_XAD_GOT_16, 44)
++ELF_RELOC(R_XAD_GOTP_32, 48)
++ELF_RELOC(R_XAD_GOTP_32UA, 49)
++ELF_RELOC(R_XAD_GOTP_16H, 50)
++ELF_RELOC(R_XAD_GOTP_16L, 51)
++ELF_RELOC(R_XAD_GOTP_16, 52)
++ELF_RELOC(R_XAD_PLT_32, 56)
++ELF_RELOC(R_XAD_PLT_32UA, 57)
++ELF_RELOC(R_XAD_PLT_16H, 58)
++ELF_RELOC(R_XAD_PLT_16L, 59)
++ELF_RELOC(R_XAD_PLT_16, 60)
++ELF_RELOC(R_XAD_ABREL_32, 64)
++ELF_RELOC(R_XAD_ABREL_32UA, 65)
++ELF_RELOC(R_XAD_ABREL_16H, 66)
++ELF_RELOC(R_XAD_ABREL_16L, 67)
++ELF_RELOC(R_XAD_ABREL_16, 68)
++ELF_RELOC(R_XAD_GOT_ABREL_32, 72)
++ELF_RELOC(R_XAD_GOT_ABREL_32UA, 73)
++ELF_RELOC(R_XAD_GOT_ABREL_16H, 74)
++ELF_RELOC(R_XAD_GOT_ABREL_16L, 75)
++ELF_RELOC(R_XAD_GOT_ABREL_16, 76)
++ELF_RELOC(R_XAD_GOTP_ABREL_32, 80)
++ELF_RELOC(R_XAD_GOTP_ABREL_32UA, 81)
++ELF_RELOC(R_XAD_GOTP_ABREL_16H, 82)
++ELF_RELOC(R_XAD_GOTP_ABREL_16L, 83)
++ELF_RELOC(R_XAD_GOTP_ABREL_16, 84)
++ELF_RELOC(R_XAD_PLT_ABREL_32, 88)
++ELF_RELOC(R_XAD_PLT_ABREL_32UA, 89)
++ELF_RELOC(R_XAD_PLT_ABREL_16H, 90)
++ELF_RELOC(R_XAD_PLT_ABREL_16L, 91)
++ELF_RELOC(R_XAD_PLT_ABREL_16, 92)
++ELF_RELOC(R_XAD_SREL_32, 96)
++ELF_RELOC(R_XAD_SREL_32UA, 97)
++ELF_RELOC(R_XAD_SREL_16H, 98)
++ELF_RELOC(R_XAD_SREL_16L, 99)
++
++/* These are GNU extensions to enable C++ vtable garbage collection. */
++ELF_RELOC(R_XAD_GNU_VTINHERIT, 100)
++ELF_RELOC(R_XAD_GNU_VTENTRY, 101)
+diff --git a/llvm/include/llvm/MC/MCELFObjectWriter.h b/llvm/include/llvm/MC/MCELFObjectWriter.h
+index aca77f5f2687..74fbca7aa6a7 100644
+--- a/llvm/include/llvm/MC/MCELFObjectWriter.h
++++ b/llvm/include/llvm/MC/MCELFObjectWriter.h
+@@ -78,6 +78,8 @@ public:
+       case Triple::PS4:
+       case Triple::FreeBSD:
+         return ELF::ELFOSABI_FREEBSD;
++      case Triple::OpenBSD:
++        return ELF::ELFOSABI_OPENBSD;
+       case Triple::Solaris:
+         return ELF::ELFOSABI_SOLARIS;
+       default:
+diff --git a/llvm/include/llvm/Object/ELFObjectFile.h b/llvm/include/llvm/Object/ELFObjectFile.h
+index f3016cc141b0..687c6064b22f 100644
+--- a/llvm/include/llvm/Object/ELFObjectFile.h
++++ b/llvm/include/llvm/Object/ELFObjectFile.h
+@@ -1206,6 +1206,10 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
+       return "elf32-hexagon";
+     case ELF::EM_LANAI:
+       return "elf32-lanai";
++    case ELF::EM_88K:
++      return "elf32-m88k";
++    case ELF::EM_XAD:
++      return "elf32-xad";
+     case ELF::EM_MIPS:
+       return "elf32-mips";
+     case ELF::EM_MSP430:
+@@ -1283,6 +1287,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
+     return Triple::hexagon;
+   case ELF::EM_LANAI:
+     return Triple::lanai;
++  case ELF::EM_XAD:
++    return Triple::xad;
+   case ELF::EM_MIPS:
+     switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
+     case ELF::ELFCLASS32:
+diff --git a/llvm/include/llvm/TargetParser/Triple.h b/llvm/include/llvm/TargetParser/Triple.h
+index 79ccd644a50b..c2642514c418 100644
+--- a/llvm/include/llvm/TargetParser/Triple.h
++++ b/llvm/include/llvm/TargetParser/Triple.h
+@@ -61,6 +61,7 @@ public:
+     loongarch32,    // LoongArch (32-bit): loongarch32
+     loongarch64,    // LoongArch (64-bit): loongarch64
+     m68k,           // M68k: Motorola 680x0 family
++    xad,            // xad
+     mips,           // MIPS: mips, mipsallegrex, mipsr6
+     mipsel,         // MIPSEL: mipsel, mipsallegrexe, mipsr6el
+     mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
+@@ -872,6 +873,10 @@ public:
+   /// Tests whether the target is LoongArch (32- and 64-bit).
+   bool isLoongArch() const { return isLoongArch32() || isLoongArch64(); }
+ 
++  bool isXAD() const {
++    return getArch() == Triple::xad;
++  }
++
+   /// Tests whether the target is MIPS 32-bit (little and big endian).
+   bool isMIPS32() const {
+     return getArch() == Triple::mips || getArch() == Triple::mipsel;
+diff --git a/llvm/lib/Object/ELF.cpp b/llvm/lib/Object/ELF.cpp
+index 0d1862e57371..c70009966b5a 100644
+--- a/llvm/lib/Object/ELF.cpp
++++ b/llvm/lib/Object/ELF.cpp
+@@ -45,6 +45,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
+       break;
+     }
+     break;
++  case ELF::EM_XAD:
++    switch (Type) {
++#include "llvm/BinaryFormat/ELFRelocs/XAD.def"
++    default:
++      break;
++    }
++    break;
+   case ELF::EM_MIPS:
+     switch (Type) {
+ #include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+diff --git a/llvm/lib/Object/ELFObjectFile.cpp b/llvm/lib/Object/ELFObjectFile.cpp
+index 143f9d37849d..2c1f56b87a57 100644
+--- a/llvm/lib/Object/ELFObjectFile.cpp
++++ b/llvm/lib/Object/ELFObjectFile.cpp
+@@ -358,6 +358,10 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
+   switch (getEMachine()) {
+   case ELF::EM_AMDGPU:
+     return getAMDGPUCPUName();
++
++  case ELF::EM_XAD:
++    return StringRef("bluedot-v1");
++
+   case ELF::EM_PPC:
+   case ELF::EM_PPC64:
+     return StringRef("future");
+diff --git a/llvm/lib/ObjectYAML/ELFYAML.cpp b/llvm/lib/ObjectYAML/ELFYAML.cpp
+index e92c61d81055..a186c5c207a8 100644
+--- a/llvm/lib/ObjectYAML/ELFYAML.cpp
++++ b/llvm/lib/ObjectYAML/ELFYAML.cpp
+@@ -912,6 +912,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
+   case ELF::EM_68K:
+ #include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+     break;
++  case ELF::EM_XAD:
++#include "llvm/BinaryFormat/ELFRelocs/XAD.def"
++    break;
+   case ELF::EM_LOONGARCH:
+ #include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+     break;
+diff --git a/llvm/lib/Target/XAD/AsmParser/CMakeLists.txt b/llvm/lib/Target/XAD/AsmParser/CMakeLists.txt
+new file mode 100644
+index 000000000000..22932aa31e1a
+--- /dev/null
++++ b/llvm/lib/Target/XAD/AsmParser/CMakeLists.txt
+@@ -0,0 +1,13 @@
++add_llvm_component_library(LLVMXADAsmParser
++  XADAsmParser.cpp
++
++  LINK_COMPONENTS
++  MC
++  MCParser
++  Support
++  XADDesc
++  XADInfo
++
++  ADD_TO_COMPONENT
++  XAD
++  )
+diff --git a/llvm/lib/Target/XAD/AsmParser/XADAsmParser.cpp b/llvm/lib/Target/XAD/AsmParser/XADAsmParser.cpp
+new file mode 100644
+index 000000000000..ab251af9de51
+--- /dev/null
++++ b/llvm/lib/Target/XAD/AsmParser/XADAsmParser.cpp
+@@ -0,0 +1,375 @@
++//===-- XADAsmParser.cpp - Parse XAD assembly to
++// MCInst instructions ----===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "MCTargetDesc/XADInstPrinter.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "TargetInfo/XADTargetInfo.h"
++#include "llvm/ADT/StringRef.h"
++#include "llvm/MC/MCAsmMacro.h"
++#include "llvm/MC/MCExpr.h"
++#include "llvm/MC/MCInstrInfo.h"
++#include "llvm/MC/MCParser/MCAsmLexer.h"
++#include "llvm/MC/MCParser/MCAsmParser.h"
++#include "llvm/MC/MCParser/MCParsedAsmOperand.h"
++#include "llvm/MC/MCParser/MCTargetAsmParser.h"
++#include "llvm/MC/MCStreamer.h"
++#include "llvm/MC/MCSubtargetInfo.h"
++#include "llvm/MC/MCSymbol.h"
++#include "llvm/MC/TargetRegistry.h"
++#include "llvm/Support/Casting.h"
++#include "llvm/Support/Compiler.h"
++#include "llvm/Support/ErrorHandling.h"
++#include "llvm/Support/SMLoc.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/TargetParser/SubtargetFeature.h"
++#include <cassert>
++#include <cstdint>
++#include <memory>
++#include <string>
++
++using namespace llvm;
++
++namespace {
++
++// Instances of this class represented a parsed machine
++// instruction
++class XADOperand : public MCParsedAsmOperand {
++  enum OperandKind {
++    OpKind_Token,
++    OpKind_Reg,
++    OpKind_Imm,
++  };
++
++  OperandKind Kind;
++  SMLoc StartLoc, EndLoc;
++
++  union {
++    StringRef Token;
++    unsigned RegNo;
++    const MCExpr *Imm;
++  };
++
++  void addExpr(MCInst &Inst, const MCExpr *Expr) const {
++    // Add as immediates when possible.  Null MCExpr =
++    // 0.
++    if (!Expr)
++      Inst.addOperand(MCOperand::createImm(0));
++    else if (auto *CE = dyn_cast<MCConstantExpr>(Expr))
++      Inst.addOperand(
++          MCOperand::createImm(CE->getValue()));
++    else
++      Inst.addOperand(MCOperand::createExpr(Expr));
++  }
++
++public:
++  XADOperand(OperandKind Kind, SMLoc StartLoc,
++              SMLoc EndLoc)
++      : Kind(Kind), StartLoc(StartLoc), EndLoc(EndLoc) {
++  }
++
++  // getStartLoc - Gets location of the first token of
++  // this operand
++  SMLoc getStartLoc() const override {
++    return StartLoc;
++  }
++
++  // getEndLoc - Gets location of the last token of this
++  // operand
++  SMLoc getEndLoc() const override { return EndLoc; }
++
++  bool isReg() const override {
++    return Kind == OpKind_Reg;
++  }
++
++  unsigned getReg() const override {
++    assert(isReg() && "Invalid type access!");
++    return RegNo;
++  }
++
++  bool isImm() const override {
++    return Kind == OpKind_Imm;
++  }
++
++  const MCExpr *getImm() const {
++    assert(isImm() && "Invalid type access!");
++    return Imm;
++  }
++
++  bool isToken() const override {
++    return Kind == OpKind_Token;
++  }
++
++  StringRef getToken() const {
++    assert(isToken() && "Not a token");
++    return Token;
++  }
++
++  bool isMem() const override { return false; }
++
++  static std::unique_ptr<XADOperand>
++  createToken(StringRef Str, SMLoc Loc) {
++    auto Op = std::make_unique<XADOperand>(
++        OpKind_Token, Loc, Loc);
++    Op->Token = Str;
++    return Op;
++  }
++
++  static std::unique_ptr<XADOperand>
++  createReg(unsigned Num, SMLoc StartLoc,
++            SMLoc EndLoc) {
++    auto Op = std::make_unique<XADOperand>(
++        OpKind_Reg, StartLoc, EndLoc);
++    Op->RegNo = Num;
++    return Op;
++  }
++
++  static std::unique_ptr<XADOperand>
++  createImm(const MCExpr *Expr, SMLoc StartLoc,
++            SMLoc EndLoc) {
++    auto Op = std::make_unique<XADOperand>(
++        OpKind_Imm, StartLoc, EndLoc);
++    Op->Imm = Expr;
++    return Op;
++  }
++
++  // Used by the TableGen code to add particular types
++  // of operand to an instruction.
++  void addRegOperands(MCInst &Inst, unsigned N) const {
++    assert(N == 1 && "Invalid number of operands");
++    Inst.addOperand(MCOperand::createReg(getReg()));
++  }
++
++  void addImmOperands(MCInst &Inst, unsigned N) const {
++    assert(N == 1 && "Invalid number of operands");
++    addExpr(Inst, getImm());
++  }
++
++  void print(raw_ostream &OS) const override {
++    switch (Kind) {
++    case OpKind_Imm:
++      OS << "Imm: " << getImm() << "\n";
++      break;
++    case OpKind_Token:
++      OS << "Token: " << getToken() << "\n";
++      break;
++    case OpKind_Reg:
++      OS << "Reg: "
++         << XADInstPrinter::getRegisterName(getReg())
++         << "\n";
++      break;
++    }
++  }
++};
++
++class XADAsmParser : public MCTargetAsmParser {
++// Auto-generated instruction matching functions
++#define GET_ASSEMBLER_HEADER
++#include "XADGenAsmMatcher.inc"
++
++  MCAsmParser &Parser;
++  const MCSubtargetInfo &SubtargetInfo;
++
++  bool
++  ParseInstruction(ParseInstructionInfo &Info,
++                   StringRef Name, SMLoc NameLoc,
++                   OperandVector &Operands) override;
++  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
++                     SMLoc &EndLoc) override;
++  OperandMatchResultTy
++  tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
++                   SMLoc &EndLoc) override;
++
++  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
++                     SMLoc &EndLoc,
++                     bool RestoreOnFailure);
++  bool parseOperand(OperandVector &Operands,
++                    StringRef Mnemonic);
++
++  bool MatchAndEmitInstruction(
++      SMLoc IdLoc, unsigned &Opcode,
++      OperandVector &Operands, MCStreamer &Out,
++      uint64_t &ErrorInfo,
++      bool MatchingInlineAsm) override;
++
++public:
++  XADAsmParser(const MCSubtargetInfo &STI,
++                MCAsmParser &Parser,
++                const MCInstrInfo &MII,
++                const MCTargetOptions &Options)
++      : MCTargetAsmParser(Options, STI, MII),
++        Parser(Parser), SubtargetInfo(STI) {
++    setAvailableFeatures(ComputeAvailableFeatures(
++        SubtargetInfo.getFeatureBits()));
++  }
++};
++
++} // end anonymous namespace
++
++#define GET_REGISTER_MATCHER
++#define GET_MATCHER_IMPLEMENTATION
++#include "XADGenAsmMatcher.inc"
++
++bool XADAsmParser::ParseInstruction(
++    ParseInstructionInfo &Info, StringRef Name,
++    SMLoc NameLoc, OperandVector &Operands) {
++  // First operand in MCInst is instruction mnemonic.
++  Operands.push_back(
++      XADOperand::createToken(Name, NameLoc));
++
++  // Read the remaining operands.
++  if (getLexer().isNot(AsmToken::EndOfStatement)) {
++
++    // Read the first operand.
++    if (parseOperand(Operands, Name)) {
++      return Error(getLexer().getLoc(),
++                   "expected operand");
++    }
++
++    // Read the following operands.
++    while (getLexer().is(AsmToken::Comma)) {
++      Parser.Lex();
++      if (parseOperand(Operands, Name)) {
++        return Error(getLexer().getLoc(),
++                     "expected operand");
++      }
++    }
++    if (getLexer().isNot(AsmToken::EndOfStatement))
++      return Error(getLexer().getLoc(),
++                   "unexpected token in argument list");
++  }
++
++  // Consume the EndOfStatement.
++  Parser.Lex();
++  return false;
++}
++
++bool XADAsmParser::parseOperand(
++    OperandVector &Operands, StringRef Mnemonic) {
++  // Check if it is a register.
++  if (Parser.getTok().is(AsmToken::Percent)) {
++    MCRegister RegNo;
++    SMLoc StartLoc, EndLoc;
++    if (parseRegister(RegNo, StartLoc, EndLoc,
++                      /*RestoreOnFailure=*/false))
++      return true;
++    Operands.push_back(XADOperand::createReg(
++        RegNo, StartLoc, EndLoc));
++    return false;
++  }
++
++  // Could be immediate or address.
++  if (Parser.getTok().is(AsmToken::Integer)) {
++    SMLoc StartLoc = Parser.getTok().getLoc();
++    const MCExpr *Expr;
++    if (Parser.parseExpression(Expr))
++      return true;
++    SMLoc EndLoc = Parser.getTok().getLoc();
++    Operands.push_back(
++        XADOperand::createImm(Expr, StartLoc, EndLoc));
++    return false;
++  }
++  // Failure
++  return true;
++}
++
++// Parses register of form %(r|x|cr|fcr)<No>.
++bool XADAsmParser::parseRegister(
++    MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
++    bool RestoreOnFailure) {
++  StartLoc = Parser.getTok().getLoc();
++
++  // Eat the '%' prefix.
++  if (Parser.getTok().isNot(AsmToken::Percent))
++    return true;
++  const AsmToken &PercentTok = Parser.getTok();
++  Parser.Lex();
++
++  // Match the register.
++  if (Parser.getTok().isNot(AsmToken::Identifier) ||
++      (RegNo = MatchRegisterName(
++           Parser.getTok().getIdentifier())) == 0) {
++    if (RestoreOnFailure)
++      Parser.getLexer().UnLex(PercentTok);
++    return Error(StartLoc, "invalid register");
++  }
++
++  Parser.Lex(); // Eat identifier token.
++  EndLoc = Parser.getTok().getLoc();
++  return false;
++}
++
++bool XADAsmParser::parseRegister(MCRegister &RegNo,
++                                  SMLoc &StartLoc,
++                                  SMLoc &EndLoc) {
++  return parseRegister(RegNo, StartLoc, EndLoc,
++                       /*RestoreOnFailure=*/false);
++}
++
++OperandMatchResultTy XADAsmParser::tryParseRegister(
++    MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
++  bool Result =
++      parseRegister(RegNo, StartLoc, EndLoc,
++                    /*RestoreOnFailure=*/true);
++  bool PendingErrors = getParser().hasPendingError();
++  getParser().clearPendingErrors();
++  if (PendingErrors)
++    return MatchOperand_ParseFail;
++  if (Result)
++    return MatchOperand_NoMatch;
++  return MatchOperand_Success;
++}
++
++bool XADAsmParser::MatchAndEmitInstruction(
++    SMLoc IdLoc, unsigned &Opcode,
++    OperandVector &Operands, MCStreamer &Out,
++    uint64_t &ErrorInfo, bool MatchingInlineAsm) {
++  MCInst Inst;
++  SMLoc ErrorLoc;
++
++  switch (MatchInstructionImpl(
++      Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
++  case Match_Success:
++    Out.emitInstruction(Inst, SubtargetInfo);
++    Opcode = Inst.getOpcode();
++    return false;
++  case Match_MissingFeature:
++    return Error(IdLoc, "Instruction use requires "
++                        "option to be enabled");
++  case Match_MnemonicFail:
++    return Error(IdLoc,
++                 "Unrecognized instruction mnemonic");
++  case Match_InvalidOperand: {
++    ErrorLoc = IdLoc;
++    if (ErrorInfo != ~0U) {
++      if (ErrorInfo >= Operands.size())
++        return Error(
++            IdLoc, "Too few operands for instruction");
++
++      ErrorLoc = ((XADOperand &)*Operands[ErrorInfo])
++                     .getStartLoc();
++      if (ErrorLoc == SMLoc())
++        ErrorLoc = IdLoc;
++    }
++    return Error(ErrorLoc,
++                 "Invalid operand for instruction");
++  }
++  default:
++    break;
++  }
++
++  llvm_unreachable("Unknown match type detected!");
++}
++
++extern "C" LLVM_EXTERNAL_VISIBILITY void
++LLVMInitializeXADAsmParser() {
++  RegisterMCAsmParser<XADAsmParser> X(
++      getTheXADTarget());
++}
+diff --git a/llvm/lib/Target/XAD/CMakeLists.txt b/llvm/lib/Target/XAD/CMakeLists.txt
+new file mode 100644
+index 000000000000..f15e6ac86194
+--- /dev/null
++++ b/llvm/lib/Target/XAD/CMakeLists.txt
+@@ -0,0 +1,48 @@
++add_llvm_component_group(XAD)
++
++set(LLVM_TARGET_DEFINITIONS XAD.td)
++
++tablegen(LLVM XADGenAsmMatcher.inc -gen-asm-matcher)
++tablegen(LLVM XADGenAsmWriter.inc -gen-asm-writer)
++tablegen(LLVM XADGenCallingConv.inc -gen-callingconv)
++tablegen(LLVM XADGenDAGISel.inc -gen-dag-isel)
++tablegen(LLVM XADGenDisassemblerTables.inc -gen-disassembler)
++tablegen(LLVM XADGenInstrInfo.inc -gen-instr-info)
++tablegen(LLVM XADGenMCCodeEmitter.inc -gen-emitter)
++tablegen(LLVM XADGenRegisterInfo.inc -gen-register-info)
++tablegen(LLVM XADGenSubtargetInfo.inc -gen-subtarget)
++
++add_public_tablegen_target(XADCommonTableGen)
++
++add_llvm_target(XADCodeGen
++  XADAsmPrinter.cpp
++  XADFrameLowering.cpp
++  XADInstrInfo.cpp
++  XADISelDAGToDAG.cpp
++  XADISelLowering.cpp
++  XADMCInstLower.cpp
++  XADRegisterInfo.cpp
++  XADSubtarget.cpp
++  XADTargetMachine.cpp
++
++  LINK_COMPONENTS
++  Analysis
++  AsmPrinter
++  CodeGen
++  Core
++  MC
++  Scalar
++  SelectionDAG
++  Support
++  XADDesc
++  XADInfo
++  Target
++
++  ADD_TO_COMPONENT
++  XAD
++  )
++
++add_subdirectory(AsmParser)
++add_subdirectory(Disassembler)
++add_subdirectory(TargetInfo)
++add_subdirectory(MCTargetDesc)
+diff --git a/llvm/lib/Target/XAD/Disassembler/CMakeLists.txt b/llvm/lib/Target/XAD/Disassembler/CMakeLists.txt
+new file mode 100644
+index 000000000000..1ba36723852f
+--- /dev/null
++++ b/llvm/lib/Target/XAD/Disassembler/CMakeLists.txt
+@@ -0,0 +1,13 @@
++add_llvm_component_library(LLVMXADDisassembler
++  XADDisassembler.cpp
++
++  LINK_COMPONENTS
++  MC
++  MCDisassembler
++  Support
++  XADDesc
++  XADInfo
++
++  ADD_TO_COMPONENT
++  XAD
++  )
+diff --git a/llvm/lib/Target/XAD/Disassembler/XADDisassembler.cpp b/llvm/lib/Target/XAD/Disassembler/XADDisassembler.cpp
+new file mode 100644
+index 000000000000..3e80eeec6de4
+--- /dev/null
++++ b/llvm/lib/Target/XAD/Disassembler/XADDisassembler.cpp
+@@ -0,0 +1,98 @@
++//===-- XADDisassembler.cpp - Disassembler for XAD ------------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++//#include "XAD.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "TargetInfo/XADTargetInfo.h"
++#include "llvm/MC/MCDecoderOps.h"
++#include "llvm/MC/MCDisassembler/MCDisassembler.h"
++#include "llvm/MC/MCInst.h"
++#include "llvm/MC/MCSubtargetInfo.h"
++#include "llvm/MC/TargetRegistry.h"
++#include "llvm/Support/MathExtras.h"
++#include <cassert>
++#include <cstdint>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "xad-disassembler"
++
++using DecodeStatus = MCDisassembler::DecodeStatus;
++
++namespace {
++
++class XADDisassembler : public MCDisassembler {
++public:
++  XADDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
++      : MCDisassembler(STI, Ctx) {}
++  ~XADDisassembler() override = default;
++
++  DecodeStatus getInstruction(MCInst &instr, uint64_t &Size,
++                              ArrayRef<uint8_t> Bytes, uint64_t Address,
++                              raw_ostream &CStream) const override;
++};
++
++} // end anonymous namespace
++
++static MCDisassembler *createXADDisassembler(const Target &T,
++                                              const MCSubtargetInfo &STI,
++                                              MCContext &Ctx) {
++  return new XADDisassembler(STI, Ctx);
++}
++
++extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXADDisassembler() {
++  // Register the disassembler.
++  TargetRegistry::RegisterMCDisassembler(getTheXADTarget(),
++                                         createXADDisassembler);
++}
++
++static const uint16_t GPRDecoderTable[] = {
++    XAD::R0,  XAD::R1,  XAD::R2,  XAD::R3,  XAD::R4,  XAD::R5,
++    XAD::R6,  XAD::R7,  XAD::R8,  XAD::R9,  XAD::R10, XAD::R11,
++    XAD::R12, XAD::R13, XAD::R14, XAD::R15,
++
++    XAD::R16, XAD::R17, XAD::R18, XAD::R19, XAD::R20, XAD::R21,
++    XAD::R22, XAD::R23, XAD::R24, XAD::R25, XAD::R26, XAD::R27,
++    XAD::R28, XAD::R29, XAD::R30, XAD::R31,
++};
++
++static DecodeStatus decodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
++                                           uint64_t Address,
++                                           const void *Decoder) {
++  if (RegNo > 31)
++    return MCDisassembler::Fail;
++
++  unsigned Register = GPRDecoderTable[RegNo];
++  Inst.addOperand(MCOperand::createReg(Register));
++  return MCDisassembler::Success;
++}
++
++#include "XADGenDisassemblerTables.inc"
++
++DecodeStatus XADDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
++                                              ArrayRef<uint8_t> Bytes,
++                                              uint64_t Address,
++                                              raw_ostream &CS) const {
++  // Instruction size is always 32 bit.
++  if (Bytes.size() < 4) {
++    Size = 0;
++    return MCDisassembler::Fail;
++  }
++  Size = 4;
++
++  // Construct the instruction.
++  uint32_t Inst = 0;
++  for (uint32_t I = 0; I < Size; ++I)
++    Inst = (Inst << 8) | Bytes[I];
++
++  if (decodeInstruction(DecoderTableXAD32, MI, Inst, Address, this, STI) !=
++      MCDisassembler::Success) {
++    return MCDisassembler::Fail;
++  }
++  return MCDisassembler::Success;
++}
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/CMakeLists.txt b/llvm/lib/Target/XAD/MCTargetDesc/CMakeLists.txt
+new file mode 100644
+index 000000000000..cfe403a19719
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/CMakeLists.txt
+@@ -0,0 +1,14 @@
++add_llvm_component_library(LLVMXADDesc
++  XADInstPrinter.cpp
++  XADMCCodeEmitter.cpp
++  XADMCAsmInfo.cpp
++  XADMCTargetDesc.cpp
++
++  LINK_COMPONENTS
++  MC
++  Support
++  XADInfo
++
++  ADD_TO_COMPONENT
++  XAD
++  )
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.cpp b/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.cpp
+new file mode 100644
+index 000000000000..26645b4472c0
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.cpp
+@@ -0,0 +1,65 @@
++//===- XADInstPrinter.cpp - Convert XAD MCInst to assembly syntax -------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADInstPrinter.h"
++#include "llvm/MC/MCAsmInfo.h"
++#include "llvm/MC/MCExpr.h"
++#include "llvm/MC/MCInst.h"
++#include "llvm/MC/MCSymbol.h"
++#include "llvm/Support/Casting.h"
++#include "llvm/Support/ErrorHandling.h"
++#include "llvm/Support/MathExtras.h"
++#include "llvm/Support/raw_ostream.h"
++#include <cassert>
++#include <cstdint>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "asm-printer"
++
++#include "XADGenAsmWriter.inc"
++
++void XADInstPrinter::printOperand(const MCInst *MI, int OpNum,
++                                   const MCSubtargetInfo &STI, raw_ostream &O) {
++  const MCOperand &MO = MI->getOperand(OpNum);
++  if (MO.isReg()) {
++    if (!MO.getReg())
++      O << '0';
++    else
++      // O << '%' << getRegisterName(MO.getReg());
++      O << getRegisterName(MO.getReg());
++  } else if (MO.isImm())
++    O << MO.getImm();
++  else if (MO.isExpr())
++    MO.getExpr()->print(O, &MAI);
++  else
++    llvm_unreachable("Invalid operand");
++}
++
++void XADInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
++                                   raw_ostream &O) {
++  if (MO.isReg()) {
++    if (!MO.getReg())
++      O << '0';
++    else
++      // O << '%' << getRegisterName(MO.getReg());
++      O << getRegisterName(MO.getReg());
++  } else if (MO.isImm())
++    O << MO.getImm();
++  else if (MO.isExpr())
++    MO.getExpr()->print(O, MAI);
++  else
++    llvm_unreachable("Invalid operand");
++}
++
++void XADInstPrinter::printInst(const MCInst *MI, uint64_t Address,
++                                StringRef Annot, const MCSubtargetInfo &STI,
++                                raw_ostream &O) {
++  printInstruction(MI, Address, STI, O);
++  printAnnotation(O, Annot);
++}
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.h b/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.h
+new file mode 100644
+index 000000000000..c689581cea7a
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADInstPrinter.h
+@@ -0,0 +1,51 @@
++//==- XADInstPrinter.h - Convert XAD MCInst to assembly --------*- C++ -*-==//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This class prints a XAD MCInst to a .s file.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADINSTPRINTER_H
++#define LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADINSTPRINTER_H
++
++#include "llvm/MC/MCInstPrinter.h"
++#include "llvm/MC/MCRegister.h"
++#include <cstdint>
++
++namespace llvm {
++
++class MCAsmInfo;
++class MCOperand;
++
++class XADInstPrinter : public MCInstPrinter {
++public:
++  XADInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
++                  const MCRegisterInfo &MRI)
++      : MCInstPrinter(MAI, MII, MRI) {}
++
++  // Automatically generated by tblgen.
++  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
++  void printInstruction(const MCInst *MI, uint64_t Address,
++                        const MCSubtargetInfo &STI, raw_ostream &O);
++  static const char *getRegisterName(MCRegister RegNo);
++
++  // Print the given operand.
++  void printOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
++                    raw_ostream &O);
++  static void printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
++                           raw_ostream &O);
++
++  // Override MCInstPrinter.
++  // void printRegName(raw_ostream &O, unsigned RegNo) const override;
++  void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
++                 const MCSubtargetInfo &STI, raw_ostream &O) override;
++};
++
++} // end namespace llvm
++
++#endif // LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADINSTPRINTER_H
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.cpp b/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.cpp
+new file mode 100644
+index 000000000000..eae7264b1c6a
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.cpp
+@@ -0,0 +1,30 @@
++//===-- XADMCAsmInfo.cpp - XAD asm properties ---------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADMCAsmInfo.h"
++#include "llvm/MC/MCContext.h"
++#include "llvm/MC/MCSectionELF.h"
++
++using namespace llvm;
++
++XADMCAsmInfo::XADMCAsmInfo(const Triple &TT) {
++  // TODO: Check!
++  CodePointerSize = 4;
++  CalleeSaveStackSlotSize = 4;
++  IsLittleEndian = false;
++  UseDotAlignForAlignment = true;
++  MinInstAlignment = 4;
++
++  // CommentString = "|"; // # as comment delimiter is only allowed at first column
++  CommentString = ";"; // # as comment delimiter is only allowed at first column
++  ZeroDirective = "\t.space\t";
++  Data64bitsDirective = "\t.quad\t";
++  UsesELFSectionDirectiveForBSS = true;
++  SupportsDebugInformation = false;
++  ExceptionsType = ExceptionHandling::SjLj;
++}
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.h b/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.h
+new file mode 100644
+index 000000000000..5e4510303db3
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADMCAsmInfo.h
+@@ -0,0 +1,25 @@
++//====-- XADMCAsmInfo.h - XAD asm properties ---------------*- C++ -*--===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADMCASMINFO_H
++#define LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADMCASMINFO_H
++
++#include "llvm/MC/MCAsmInfoELF.h"
++#include "llvm/Support/Compiler.h"
++
++namespace llvm {
++class Triple;
++
++class XADMCAsmInfo : public MCAsmInfoELF {
++public:
++  explicit XADMCAsmInfo(const Triple &TT);
++};
++
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADMCCodeEmitter.cpp b/llvm/lib/Target/XAD/MCTargetDesc/XADMCCodeEmitter.cpp
+new file mode 100644
+index 000000000000..a460ad35b082
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADMCCodeEmitter.cpp
+@@ -0,0 +1,94 @@
++//===-- XADMCCodeEmitter.cpp - Convert XAD code to machine code ---------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements the XADMCCodeEmitter class.
++//
++//===----------------------------------------------------------------------===//
++
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "llvm/ADT/SmallVector.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/MC/MCCodeEmitter.h"
++#include "llvm/MC/MCContext.h"
++#include "llvm/MC/MCInst.h"
++#include "llvm/MC/MCInstrInfo.h"
++#include "llvm/MC/MCRegisterInfo.h"
++#include "llvm/MC/MCSubtargetInfo.h"
++#include "llvm/Support/Casting.h"
++#include "llvm/Support/EndianStream.h"
++#include "llvm/Support/raw_ostream.h"
++#include <cassert>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "mccodeemitter"
++
++STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
++
++namespace {
++
++class XADMCCodeEmitter : public MCCodeEmitter {
++  const MCInstrInfo &MCII;
++  MCContext &Ctx;
++
++public:
++  XADMCCodeEmitter(const MCInstrInfo &MCII,
++                    MCContext &Ctx)
++      : MCII(MCII), Ctx(Ctx) {}
++
++  ~XADMCCodeEmitter() override = default;
++
++  // OVerride MCCodeEmitter.
++  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
++                         SmallVectorImpl<MCFixup> &Fixups,
++                         const MCSubtargetInfo &STI) const override;
++
++  // Generated by TableGen.
++  uint64_t getBinaryCodeForInstr(const MCInst &MI,
++                                 SmallVectorImpl<MCFixup> &Fixups,
++                                 const MCSubtargetInfo &STI) const;
++
++  // Functions called by the generated function.
++
++  /// \brief Return the binary encoding of operand. If the machine
++  /// operand requires relocation, record the relocation and return zero.
++  unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
++                             SmallVectorImpl<MCFixup> &Fixups,
++                             const MCSubtargetInfo &STI) const;
++};
++
++} // end anonymous namespace
++
++void XADMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
++                                          SmallVectorImpl<MCFixup> &Fixups,
++                                          const MCSubtargetInfo &STI) const {
++  // Get instruction encoding and emit it.
++  uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
++  ++MCNumEmitted; // Keep track of the number of emitted insns.
++
++  support::endian::write<uint32_t>(OS, Bits, support::big);
++}
++
++unsigned
++XADMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
++                                     SmallVectorImpl<MCFixup> &Fixups,
++                                     const MCSubtargetInfo &STI) const {
++  if (MO.isReg())
++    return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
++  if (MO.isImm())
++    return static_cast<uint64_t>(MO.getImm());
++  return 0;
++}
++
++//#define ENABLE_INSTR_PREDICATE_VERIFIER
++#include "XADGenMCCodeEmitter.inc"
++
++MCCodeEmitter *llvm::createXADMCCodeEmitter(const MCInstrInfo &MCII,
++                                             MCContext &Ctx) {
++  return new XADMCCodeEmitter(MCII, Ctx);
++}
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.cpp b/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.cpp
+new file mode 100644
+index 000000000000..07a5c3de0480
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.cpp
+@@ -0,0 +1,86 @@
++//===-- XADMCTargetDesc.cpp - XAD target descriptions -------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADMCTargetDesc.h"
++#include "XADInstPrinter.h"
++#include "XADMCAsmInfo.h"
++#include "TargetInfo/XADTargetInfo.h"
++#include "llvm/MC/MCDwarf.h"
++#include "llvm/MC/MCInstrInfo.h"
++#include "llvm/MC/MCRegisterInfo.h"
++#include "llvm/MC/MCStreamer.h"
++#include "llvm/MC/MCSubtargetInfo.h"
++#include "llvm/MC/TargetRegistry.h"
++
++using namespace llvm;
++
++#define GET_INSTRINFO_MC_DESC
++#include "XADGenInstrInfo.inc"
++
++#define GET_SUBTARGETINFO_MC_DESC
++#include "XADGenSubtargetInfo.inc"
++
++#define GET_REGINFO_MC_DESC
++#include "XADGenRegisterInfo.inc"
++
++static MCInstPrinter *createXADMCInstPrinter(const Triple &T,
++                                              unsigned SyntaxVariant,
++                                              const MCAsmInfo &MAI,
++                                              const MCInstrInfo &MII,
++                                              const MCRegisterInfo &MRI) {
++  return new XADInstPrinter(MAI, MII, MRI);
++}
++
++static MCAsmInfo *createXADMCAsmInfo(const MCRegisterInfo &MRI,
++                                      const Triple &TT,
++                                      const MCTargetOptions &Options) {
++  MCAsmInfo *MAI = new XADMCAsmInfo(TT);
++  return MAI;
++}
++
++static MCInstrInfo *createXADMCInstrInfo() {
++  MCInstrInfo *X = new MCInstrInfo();
++  InitXADMCInstrInfo(X);
++  return X;
++}
++
++static MCRegisterInfo *createXADMCRegisterInfo(const Triple &TT) {
++  MCRegisterInfo *X = new MCRegisterInfo();
++  InitXADMCRegisterInfo(X, XAD::R1);
++  return X;
++}
++
++static MCSubtargetInfo *createXADMCSubtargetInfo(const Triple &TT,
++                                                  StringRef CPU, StringRef FS) {
++  return createXADMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
++}
++
++extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXADTargetMC() {
++  // Register the MCAsmInfo.
++  TargetRegistry::RegisterMCAsmInfo(getTheXADTarget(), createXADMCAsmInfo);
++
++  // Register the MCCodeEmitter.
++  TargetRegistry::RegisterMCCodeEmitter(getTheXADTarget(),
++                                        createXADMCCodeEmitter);
++
++  // Register the MCInstrInfo.
++  TargetRegistry::RegisterMCInstrInfo(getTheXADTarget(),
++                                      createXADMCInstrInfo);
++
++  // Register the MCRegisterInfo.
++  TargetRegistry::RegisterMCRegInfo(getTheXADTarget(),
++                                    createXADMCRegisterInfo);
++
++  // Register the MCSubtargetInfo.
++  TargetRegistry::RegisterMCSubtargetInfo(getTheXADTarget(),
++                                          createXADMCSubtargetInfo);
++
++  // Register the MCInstPrinter.
++  TargetRegistry::RegisterMCInstPrinter(getTheXADTarget(),
++                                        createXADMCInstPrinter);
++}
+diff --git a/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.h b/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.h
+new file mode 100644
+index 000000000000..baadc771572a
+--- /dev/null
++++ b/llvm/lib/Target/XAD/MCTargetDesc/XADMCTargetDesc.h
+@@ -0,0 +1,48 @@
++//===-- XADMCTargetDesc.h - XAD target descriptions -----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADMCTARGETDESC_H
++#define LLVM_LIB_TARGET_XAD_MCTARGETDESC_XADMCTARGETDESC_H
++
++#include "llvm/Support/DataTypes.h"
++
++#include <memory>
++
++namespace llvm {
++
++class MCAsmBackend;
++class MCCodeEmitter;
++class MCContext;
++class MCInstrInfo;
++class MCObjectTargetWriter;
++class MCRegisterInfo;
++class MCSubtargetInfo;
++class MCTargetOptions;
++class StringRef;
++class Target;
++class Triple;
++class raw_pwrite_stream;
++class raw_ostream;
++
++MCCodeEmitter *createXADMCCodeEmitter(const MCInstrInfo &MCII,
++                                       MCContext &Ctx);
++} // end namespace llvm
++
++// Defines symbolic names for XAD registers.
++// This defines a mapping from register name to register number.
++#define GET_REGINFO_ENUM
++#include "XADGenRegisterInfo.inc"
++
++// Defines symbolic names for the XAD instructions.
++#define GET_INSTRINFO_ENUM
++#include "XADGenInstrInfo.inc"
++
++#define GET_SUBTARGETINFO_ENUM
++#include "XADGenSubtargetInfo.inc"
++
++#endif
+diff --git a/llvm/lib/Target/XAD/TargetInfo/CMakeLists.txt b/llvm/lib/Target/XAD/TargetInfo/CMakeLists.txt
+new file mode 100644
+index 000000000000..2efe2c5843b9
+--- /dev/null
++++ b/llvm/lib/Target/XAD/TargetInfo/CMakeLists.txt
+@@ -0,0 +1,9 @@
++add_llvm_component_library(LLVMXADInfo
++  XADTargetInfo.cpp
++
++  LINK_COMPONENTS
++  Support
++
++  ADD_TO_COMPONENT
++  XAD
++  )
+diff --git a/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.cpp b/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.cpp
+new file mode 100644
+index 000000000000..42490f36f075
+--- /dev/null
++++ b/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.cpp
+@@ -0,0 +1,22 @@
++//===-- XADTargetInfo.cpp - XAD target implementation -------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "TargetInfo/XADTargetInfo.h"
++#include "llvm/MC/TargetRegistry.h"
++
++using namespace llvm;
++
++Target &llvm::getTheXADTarget() {
++  static Target TheXADTarget;
++  return TheXADTarget;
++}
++
++extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXADTargetInfo() {
++  RegisterTarget<Triple::xad, /*HasJIT=*/false> X(getTheXADTarget(), "xad",
++                                                   "XAD", "XAD");
++}
+diff --git a/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.h b/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.h
+new file mode 100644
+index 000000000000..74f7113c3701
+--- /dev/null
++++ b/llvm/lib/Target/XAD/TargetInfo/XADTargetInfo.h
+@@ -0,0 +1,20 @@
++//===-- XADTargetInfo.h - XAD target implementation -----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_TARGETINFO_XADTARGETINFO_H
++#define LLVM_LIB_TARGET_XAD_TARGETINFO_XADTARGETINFO_H
++
++namespace llvm {
++
++class Target;
++
++Target &getTheXADTarget();
++
++} // namespace llvm
++
++#endif // LLVM_LIB_TARGET_XAD_TARGETINFO_XADTARGETINFO_H
+diff --git a/llvm/lib/Target/XAD/XAD.h b/llvm/lib/Target/XAD/XAD.h
+new file mode 100644
+index 000000000000..df3810593072
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XAD.h
+@@ -0,0 +1,36 @@
++//===-- XAD.h - Top-level interface for XAD representation ----*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains the entry points for global functions defined in the LLVM
++// XAD back-end.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XAD_H
++#define LLVM_LIB_TARGET_XAD_XAD_H
++
++#include "llvm/Support/CodeGen.h"
++
++namespace llvm {
++class XADRegisterBankInfo;
++class XADSubtarget;
++class XADTargetMachine;
++class FunctionPass;
++class InstructionSelector;
++class PassRegistry;
++
++FunctionPass *createXADISelDag(XADTargetMachine &TM,
++                                CodeGenOpt::Level OptLevel);
++
++void initializeXADDAGToDAGISelPass(PassRegistry &);
++
++InstructionSelector *
++createXADInstructionSelector(const XADTargetMachine &, const XADSubtarget &,
++                              const XADRegisterBankInfo &);
++} // end namespace llvm
++#endif
+diff --git a/llvm/lib/Target/XAD/XAD.td b/llvm/lib/Target/XAD/XAD.td
+new file mode 100644
+index 000000000000..62903e5f950e
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XAD.td
+@@ -0,0 +1,48 @@
++//===-- XAD.td - Describe the BlueDotV1 Target Machine -------*- tablegen -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++//
++//===----------------------------------------------------------------------===//
++
++//===----------------------------------------------------------------------===//
++// Target-independent interfaces which we are implementing
++//===----------------------------------------------------------------------===//
++
++include "llvm/Target/Target.td"
++
++//===----------------------------------------------------------------------===//
++// Register File, Calling Conv, Instruction Descriptions
++//===----------------------------------------------------------------------===//
++
++include "XADRegisterInfo.td"
++include "XADCallingConv.td"
++include "XADInstrFormats.td"
++include "XADInstrInfo.td"
++
++//===----------------------------------------------------------------------===//
++// Declare the target which we are implementing
++//===----------------------------------------------------------------------===//
++
++def XADInstrInfo : InstrInfo;
++def XADAsmParser : AsmParser;
++def XADAsmParserVariant : AsmParserVariant {
++  let RegisterPrefix = "%";
++}
++
++def XADAsmWriter : AsmWriter {
++  string AsmWriterClassName  = "InstPrinter";
++  int PassSubtarget = 1;
++  int Variant = 0;
++}
++
++def XAD : Target {
++  let InstructionSet = XADInstrInfo;
++  let AssemblyParsers  = [XADAsmParser];
++  let AssemblyParserVariants = [XADAsmParserVariant];
++  let AssemblyWriters = [XADAsmWriter];
++}
+diff --git a/llvm/lib/Target/XAD/XADAsmPrinter.cpp b/llvm/lib/Target/XAD/XADAsmPrinter.cpp
+new file mode 100644
+index 000000000000..5a3cb224b671
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADAsmPrinter.cpp
+@@ -0,0 +1,60 @@
++//===-- XADAsmPrinter.cpp - XAD LLVM assembly writer ----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains a printer that converts from our internal representation
++// of machine-dependent LLVM code to GAS-format XAD assembly language.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADMCInstLower.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "TargetInfo/XADTargetInfo.h"
++#include "llvm/CodeGen/AsmPrinter.h"
++#include "llvm/CodeGen/MachineInstr.h"
++#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
++#include "llvm/MC/MCAsmInfo.h"
++#include "llvm/MC/MCContext.h"
++#include "llvm/MC/MCInst.h"
++#include "llvm/MC/MCStreamer.h"
++#include "llvm/MC/TargetRegistry.h"
++#include <memory>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "asm-printer"
++
++namespace {
++class XADAsmPrinter : public AsmPrinter {
++public:
++  explicit XADAsmPrinter(
++      TargetMachine &TM,
++      std::unique_ptr<MCStreamer> Streamer)
++      : AsmPrinter(TM, std::move(Streamer)) {}
++
++  StringRef getPassName() const override {
++    return "XAD Assembly Printer";
++  }
++
++  void emitInstruction(const MachineInstr *MI) override;
++};
++} // end of anonymous namespace
++
++void XADAsmPrinter::emitInstruction(
++    const MachineInstr *MI) {
++  MCInst LoweredMI;
++  XADMCInstLower Lower;
++  Lower.lower(MI, LoweredMI);
++  EmitToStreamer(*OutStreamer, LoweredMI);
++}
++
++// Force static initialization.
++extern "C" LLVM_EXTERNAL_VISIBILITY void
++LLVMInitializeXADAsmPrinter() {
++  RegisterAsmPrinter<XADAsmPrinter> X(
++      getTheXADTarget());
++}
+diff --git a/llvm/lib/Target/XAD/XADCallingConv.td b/llvm/lib/Target/XAD/XADCallingConv.td
+new file mode 100644
+index 000000000000..a31bb4a98666
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADCallingConv.td
+@@ -0,0 +1,36 @@
++//===-- XADCallingConv.td - XAD Calling Conventions ------*- tablegen -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This describes the calling conventions for the XAD architectures.
++// Only the OpenBSD variant is supported.
++//
++//===----------------------------------------------------------------------===//
++
++// XAD 32-bit ELF C Calling convention.
++def CC_XAD : CallingConv<[
++  // Promote i8/i16 args to i32.
++  CCIfType<[i8, i16], CCPromoteToType<i32>>,
++
++  // Register R12 is used to pass structure return pointer.
++  CCIfSRet<CCIfType<[i32], CCAssignToReg<[R12]>>>,
++
++  // Registers R2 to R9 are used for passing parameters.
++  CCIfType<[i32,i64,f32,f64], CCAssignToReg<[R2, R3, R4, R5, R6, R7, R8, R9]>>,
++
++  // Other arguments are passed on the stack, at least 4-byte-aligned.
++  CCAssignToStack<4, 4>
++]>;
++
++// XAD 32-bit ELF C return-value convention.
++def RetCC_XAD : CallingConv<[
++  // 32-bit values are returned in R2.
++  CCIfType<[i32], CCAssignToReg<[R2]>>,
++]>;
++
++// XAD 32-bit ELF C callee saved registers.
++def CSR_XAD : CalleeSavedRegs<(add R1, R30, (sequence "R%d", 25, 14))>;
+diff --git a/llvm/lib/Target/XAD/XADFrameLowering.cpp b/llvm/lib/Target/XAD/XADFrameLowering.cpp
+new file mode 100644
+index 000000000000..51024fce0ef8
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADFrameLowering.cpp
+@@ -0,0 +1,33 @@
++//===-- XADFrameLowering.cpp - Frame lowering for XAD -------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADFrameLowering.h"
++#include "XADRegisterInfo.h"
++#include "llvm/CodeGen/MachineBasicBlock.h"
++#include "llvm/CodeGen/MachineModuleInfo.h"
++#include "llvm/Support/Alignment.h"
++
++using namespace llvm;
++
++XADFrameLowering::XADFrameLowering()
++    : TargetFrameLowering(
++          TargetFrameLowering::StackGrowsDown, Align(8),
++          0, Align(8), false /* StackRealignable */) {}
++
++void XADFrameLowering::emitPrologue(
++    MachineFunction &MF, MachineBasicBlock &MBB) const {
++}
++
++void XADFrameLowering::emitEpilogue(
++    MachineFunction &MF, MachineBasicBlock &MBB) const {
++}
++
++bool XADFrameLowering::hasFP(
++    const MachineFunction &MF) const {
++  return false;
++}
+diff --git a/llvm/lib/Target/XAD/XADFrameLowering.h b/llvm/lib/Target/XAD/XADFrameLowering.h
+new file mode 100644
+index 000000000000..62c9bb5146c2
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADFrameLowering.h
+@@ -0,0 +1,33 @@
++//===-- XADFrameLowering.h - Frame lowering for XAD -----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADFRAMELOWERING_H
++#define LLVM_LIB_TARGET_XAD_XADFRAMELOWERING_H
++
++#include "llvm/ADT/IndexedMap.h"
++#include "llvm/CodeGen/TargetFrameLowering.h"
++
++namespace llvm {
++class XADTargetMachine;
++class XADSubtarget;
++
++class XADFrameLowering : public TargetFrameLowering {
++public:
++  XADFrameLowering();
++
++  void
++  emitPrologue(MachineFunction &MF,
++               MachineBasicBlock &MBB) const override;
++  void
++  emitEpilogue(MachineFunction &MF,
++               MachineBasicBlock &MBB) const override;
++  bool hasFP(const MachineFunction &MF) const override;
++};
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/XADISelDAGToDAG.cpp b/llvm/lib/Target/XAD/XADISelDAGToDAG.cpp
+new file mode 100644
+index 000000000000..d3481d3db12f
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADISelDAGToDAG.cpp
+@@ -0,0 +1,67 @@
++//===-- XADISelDAGToDAG.cpp - A dag to dag inst
++//selector for XAD --------===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file defines an instruction selector for the
++// XAD target.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XAD.h"
++#include "XADTargetMachine.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "llvm/CodeGen/SelectionDAGISel.h"
++#include "llvm/Pass.h"
++#include "llvm/Support/Debug.h"
++
++using namespace llvm;
++
++#define DEBUG_TYPE "xad-isel"
++#define PASS_NAME                                      \
++  "XAD DAG->DAG Pattern Instruction Selection"
++
++namespace {
++
++class XADDAGToDAGISel : public SelectionDAGISel {
++public:
++  static char ID;
++
++  XADDAGToDAGISel(XADTargetMachine &TM,
++                   CodeGenOpt::Level OptLevel)
++      : SelectionDAGISel(ID, TM, OptLevel) {}
++
++  // Override SelectionDAGISel.
++  void Select(SDNode *Node) override;
++
++// Include the pieces autogenerated from the target
++// description.
++#include "XADGenDAGISel.inc"
++};
++} // end anonymous namespace
++
++char XADDAGToDAGISel::ID = 0;
++
++INITIALIZE_PASS(XADDAGToDAGISel, DEBUG_TYPE, PASS_NAME,
++                false, false)
++
++FunctionPass *
++llvm::createXADISelDag(XADTargetMachine &TM,
++                        CodeGenOpt::Level OptLevel) {
++  return new XADDAGToDAGISel(TM, OptLevel);
++}
++
++void XADDAGToDAGISel::Select(SDNode *Node) {
++  // Instruction Selection not handled by the
++  // auto-generated tablegen selection should be handled
++  // here.
++
++  // Select the default instruction.
++  SelectCode(Node);
++}
+diff --git a/llvm/lib/Target/XAD/XADISelLowering.cpp b/llvm/lib/Target/XAD/XADISelLowering.cpp
+new file mode 100644
+index 000000000000..39a6294eff2a
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADISelLowering.cpp
+@@ -0,0 +1,396 @@
++//===-- XADISelLowering.cpp - XAD DAG lowering
++// implementation -----===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements the XADTargetLowering class.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADISelLowering.h"
++#include "XADSubtarget.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "llvm/CodeGen/CallingConvLower.h"
++#include "llvm/CodeGen/MachineRegisterInfo.h"
++#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
++#include <cstdint>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "xad-lower"
++
++// If I is a shifted mask, set the size (Width) and the
++// first bit of the mask (Offset), and return true. For
++// example, if I is 0x003e, (Width, Offset) = (5, 1).
++static bool isShiftedMask(uint64_t I, uint64_t &Width,
++                          uint64_t &Offset) {
++  if (!isShiftedMask_64(I))
++    return false;
++
++  Width = llvm::popcount(I);
++  Offset = llvm::countr_zero(I);
++  return true;
++}
++
++XADTargetLowering::XADTargetLowering(
++    const TargetMachine &TM, const XADSubtarget &STI)
++    : TargetLowering(TM), Subtarget(STI) {
++  addRegisterClass(MVT::i32, &XAD::GPRRegClass);
++
++  // Compute derived properties from the register
++  // classes
++  computeRegisterProperties(
++      Subtarget.getRegisterInfo());
++
++  // Set up special registers.
++  setStackPointerRegisterToSaveRestore(XAD::R31);
++
++  // How we extend i1 boolean values.
++  setBooleanContents(ZeroOrOneBooleanContent);
++
++  setMinFunctionAlignment(Align(4));
++  setPrefFunctionAlignment(Align(4));
++
++  setOperationAction(ISD::AND, MVT::i32, Legal);
++  setOperationAction(ISD::OR, MVT::i32, Legal);
++  setOperationAction(ISD::XOR, MVT::i32, Legal);
++
++  setOperationAction(ISD::CTPOP, MVT::i32, Expand);
++
++  // Special DAG combiner for bit-field operations.
++  setTargetDAGCombine(ISD::AND);
++  setTargetDAGCombine(ISD::OR);
++  setTargetDAGCombine(ISD::SHL);
++}
++
++SDValue XADTargetLowering::LowerOperation(
++    SDValue Op, SelectionDAG &DAG) const {
++  // TODO Implement for ops not covered by patterns in
++  // .td files.
++  /*
++    switch (Op.getOpcode())
++    {
++    case ISD::SHL:          return lowerShiftLeft(Op,
++    DAG);
++    }
++  */
++  return SDValue();
++}
++
++namespace {
++SDValue performANDCombine(
++    SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
++  SelectionDAG &DAG = DCI.DAG;
++  SDValue FirstOperand = N->getOperand(0);
++  unsigned FirstOperandOpc = FirstOperand.getOpcode();
++  // Second operand of and must be a constant.
++  ConstantSDNode *Mask =
++      dyn_cast<ConstantSDNode>(N->getOperand(1));
++  if (!Mask)
++    return SDValue();
++  EVT ValTy = N->getValueType(0);
++  SDLoc DL(N);
++
++  SDValue NewOperand;
++  unsigned Opc;
++
++  uint64_t Offset;
++  uint64_t MaskWidth, MaskOffset;
++  if (isShiftedMask(Mask->getZExtValue(), MaskWidth,
++                    MaskOffset)) {
++    if (FirstOperandOpc == ISD::SRL ||
++        FirstOperandOpc == ISD::SRA) {
++      // Pattern match:
++      // $dst = and (srl/sra $src, offset), (2**width -
++      // 1)
++      // => EXTU $dst, $src, width<offset>
++
++      // The second operand of the shift must be an
++      // immediate.
++      ConstantSDNode *ShiftAmt =
++          dyn_cast<ConstantSDNode>(
++              FirstOperand.getOperand(1));
++      if (!(ShiftAmt))
++        return SDValue();
++
++      Offset = ShiftAmt->getZExtValue();
++
++      // Return if the shifted mask does not start at
++      // bit 0 or the sum of its width and offset
++      // exceeds the word's size.
++      if (MaskOffset != 0 ||
++          Offset + MaskWidth > ValTy.getSizeInBits())
++        return SDValue();
++
++      Opc = XADISD::EXTU;
++      NewOperand = FirstOperand.getOperand(0);
++    } else
++      return SDValue();
++  } else if (isShiftedMask(
++                 ~Mask->getZExtValue() &
++                     ((0x1ULL
++                       << ValTy.getSizeInBits()) -
++                      1),
++                 MaskWidth, MaskOffset)) {
++    // Pattern match:
++    // $dst = and $src, ~((2**width - 1) << offset)
++    // => CLR $dst, $src, width<offset>
++    Opc = XADISD::CLR;
++    NewOperand = FirstOperand;
++    Offset = MaskOffset;
++  } else
++    return SDValue();
++  return DAG.getNode(
++      Opc, DL, ValTy, NewOperand,
++      DAG.getConstant(MaskWidth << 5 | Offset, DL,
++                      MVT::i32));
++}
++
++SDValue
++performORCombine(SDNode *N,
++                 TargetLowering::DAGCombinerInfo &DCI) {
++  SelectionDAG &DAG = DCI.DAG;
++  uint64_t Width, Offset;
++
++  // Second operand of or must be a constant shifted
++  // mask.
++  ConstantSDNode *Mask =
++      dyn_cast<ConstantSDNode>(N->getOperand(1));
++  if (!Mask || !isShiftedMask(Mask->getZExtValue(),
++                              Width, Offset))
++    return SDValue();
++
++  // Pattern match:
++  // $dst = or $src, ((2**width - 1) << offset
++  // => SET $dst, $src, width<offset>
++  EVT ValTy = N->getValueType(0);
++  SDLoc DL(N);
++  return DAG.getNode(
++      XADISD::SET, DL, ValTy, N->getOperand(0),
++      DAG.getConstant(Width << 5 | Offset, DL,
++                      MVT::i32));
++}
++
++SDValue performSHLCombine(
++    SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
++  // Pattern match:
++  // $dst = shl (and $src, (2**width - 1)), offset
++  // => MAK $dst, $src, width<offset>
++  SelectionDAG &DAG = DCI.DAG;
++  SDValue FirstOperand = N->getOperand(0);
++  unsigned FirstOperandOpc = FirstOperand.getOpcode();
++  // First operdns shl must be and, second operand must
++  // a constant.
++  ConstantSDNode *ShiftAmt =
++      dyn_cast<ConstantSDNode>(N->getOperand(1));
++  if (!ShiftAmt || FirstOperandOpc != ISD::AND)
++    return SDValue();
++  EVT ValTy = N->getValueType(0);
++  SDLoc DL(N);
++
++  uint64_t Offset;
++  uint64_t MaskWidth, MaskOffset;
++  ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(
++      FirstOperand->getOperand(1));
++  if (!Mask || !isShiftedMask(Mask->getZExtValue(),
++                              MaskWidth, MaskOffset))
++    return SDValue();
++
++  // The second operand of the shift must be an
++  // immediate.
++  Offset = ShiftAmt->getZExtValue();
++
++  // Return if the shifted mask does not start at bit 0
++  // or the sum of its width and offset exceeds the
++  // word's size.
++  if (MaskOffset != 0 ||
++      Offset + MaskWidth > ValTy.getSizeInBits())
++    return SDValue();
++
++  return DAG.getNode(
++      XADISD::MAK, DL, ValTy,
++      FirstOperand.getOperand(0),
++      DAG.getConstant(MaskWidth << 5 | Offset, DL,
++                      MVT::i32));
++}
++} // namespace
++
++SDValue XADTargetLowering::PerformDAGCombine(
++    SDNode *N, DAGCombinerInfo &DCI) const {
++  if (DCI.isBeforeLegalizeOps())
++    return SDValue();
++  LLVM_DEBUG(dbgs() << "In PerformDAGCombine\n");
++
++  // TODO: Match certain and/or/shift ops to ext/mak.
++  unsigned Opc = N->getOpcode();
++
++  switch (Opc) {
++  default:
++    break;
++  case ISD::AND:
++    return performANDCombine(N, DCI);
++  case ISD::OR:
++    return performORCombine(N, DCI);
++  case ISD::SHL:
++    return performSHLCombine(N, DCI);
++  }
++
++  return SDValue();
++}
++
++//===----------------------------------------------------------------------===//
++// Calling conventions
++//===----------------------------------------------------------------------===//
++
++#include "XADGenCallingConv.inc"
++
++SDValue XADTargetLowering::LowerFormalArguments(
++    SDValue Chain, CallingConv::ID CallConv,
++    bool IsVarArg,
++    const SmallVectorImpl<ISD::InputArg> &Ins,
++    const SDLoc &DL, SelectionDAG &DAG,
++    SmallVectorImpl<SDValue> &InVals) const {
++
++  MachineFunction &MF = DAG.getMachineFunction();
++  MachineRegisterInfo &MRI = MF.getRegInfo();
++
++  // Assign locations to all of the incoming arguments.
++  SmallVector<CCValAssign, 16> ArgLocs;
++  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
++                 *DAG.getContext());
++  CCInfo.AnalyzeFormalArguments(Ins, CC_XAD);
++
++  for (unsigned I = 0, E = ArgLocs.size(); I != E;
++       ++I) {
++    SDValue ArgValue;
++    CCValAssign &VA = ArgLocs[I];
++    EVT LocVT = VA.getLocVT();
++    if (VA.isRegLoc()) {
++      // Arguments passed in registers
++      const TargetRegisterClass *RC;
++      switch (LocVT.getSimpleVT().SimpleTy) {
++      default:
++        // Integers smaller than i64 should be promoted
++        // to i32.
++        llvm_unreachable("Unexpected argument type");
++      case MVT::i32:
++        RC = &XAD::GPRRegClass;
++        break;
++      }
++
++      Register VReg = MRI.createVirtualRegister(RC);
++      MRI.addLiveIn(VA.getLocReg(), VReg);
++      ArgValue =
++          DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
++
++      // If this is an 8/16-bit value, it is really
++      // passed promoted to 32 bits. Insert an
++      // assert[sz]ext to capture this, then truncate to
++      // the right size.
++      if (VA.getLocInfo() == CCValAssign::SExt)
++        ArgValue = DAG.getNode(
++            ISD::AssertSext, DL, LocVT, ArgValue,
++            DAG.getValueType(VA.getValVT()));
++      else if (VA.getLocInfo() == CCValAssign::ZExt)
++        ArgValue = DAG.getNode(
++            ISD::AssertZext, DL, LocVT, ArgValue,
++            DAG.getValueType(VA.getValVT()));
++
++      if (VA.getLocInfo() != CCValAssign::Full)
++        ArgValue = DAG.getNode(ISD::TRUNCATE, DL,
++                               VA.getValVT(), ArgValue);
++
++      InVals.push_back(ArgValue);
++    } else {
++      assert(VA.isMemLoc() &&
++             "Argument not register or memory");
++      llvm_unreachable(
++          "XAD - LowerFormalArguments - "
++          "Memory argument not implemented");
++    }
++  }
++
++  if (IsVarArg) {
++    llvm_unreachable("XAD - LowerFormalArguments - "
++                     "VarArgs not Implemented");
++  }
++
++  return Chain;
++}
++
++SDValue XADTargetLowering::LowerReturn(
++    SDValue Chain, CallingConv::ID CallConv,
++    bool IsVarArg,
++    const SmallVectorImpl<ISD::OutputArg> &Outs,
++    const SmallVectorImpl<SDValue> &OutVals,
++    const SDLoc &DL, SelectionDAG &DAG) const {
++
++  // Assign locations to each returned value.
++  SmallVector<CCValAssign, 16> RetLocs;
++  CCState RetCCInfo(CallConv, IsVarArg,
++                    DAG.getMachineFunction(), RetLocs,
++                    *DAG.getContext());
++  RetCCInfo.AnalyzeReturn(Outs, RetCC_XAD);
++
++  SDValue Glue;
++  SmallVector<SDValue, 4> RetOps(1, Chain);
++  for (unsigned I = 0, E = RetLocs.size(); I != E;
++       ++I) {
++    CCValAssign &VA = RetLocs[I];
++
++    // Make the return register live on exit.
++    assert(VA.isRegLoc() &&
++           "Can only return in registers!");
++
++    // Chain and glue the copies together.
++    Register Reg = VA.getLocReg();
++    Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[I],
++                             Glue);
++    Glue = Chain.getValue(1);
++    RetOps.push_back(
++        DAG.getRegister(Reg, VA.getLocVT()));
++  }
++
++  // Update chain and glue.
++  RetOps[0] = Chain;
++  if (Glue.getNode())
++    RetOps.push_back(Glue);
++
++  return DAG.getNode(XADISD::RET_GLUE, DL, MVT::Other,
++                     RetOps);
++}
++
++SDValue XADTargetLowering::LowerCall(
++    CallLoweringInfo &CLI,
++    SmallVectorImpl<SDValue> &InVals) const {
++  llvm_unreachable(
++      "XAD - LowerCall - Not Implemented");
++}
++
++const char *XADTargetLowering::getTargetNodeName(
++    unsigned Opcode) const {
++  switch (Opcode) {
++#define OPCODE(Opc)                                    \
++  case Opc:                                            \
++    return #Opc
++    OPCODE(XADISD::RET_GLUE);
++    OPCODE(XADISD::CALL);
++    OPCODE(XADISD::CLR);
++    OPCODE(XADISD::SET);
++    OPCODE(XADISD::EXT);
++    OPCODE(XADISD::EXTU);
++    OPCODE(XADISD::MAK);
++    OPCODE(XADISD::ROT);
++    OPCODE(XADISD::FF1);
++    OPCODE(XADISD::FF0);
++#undef OPCODE
++  default:
++    return nullptr;
++  }
++}
+diff --git a/llvm/lib/Target/XAD/XADISelLowering.h b/llvm/lib/Target/XAD/XADISelLowering.h
+new file mode 100644
+index 000000000000..6b52735a6684
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADISelLowering.h
+@@ -0,0 +1,85 @@
++//===-- XADISelLowering.h - XAD DAG lowering interface --------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file defines the interfaces that XAD uses to lower LLVM code into a
++// selection DAG.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADISELLOWERING_H
++#define LLVM_LIB_TARGET_XAD_XADISELLOWERING_H
++
++#include "XAD.h"
++#include "XADInstrInfo.h"
++#include "llvm/CodeGen/MachineBasicBlock.h"
++#include "llvm/CodeGen/SelectionDAG.h"
++#include "llvm/CodeGen/TargetLowering.h"
++
++namespace llvm {
++
++class XADSubtarget;
++class XADSubtarget;
++
++namespace XADISD {
++enum NodeType : unsigned {
++  FIRST_NUMBER = ISD::BUILTIN_OP_END,
++
++  // Return with a glue operand. Operand 0 is the chain operand.
++  RET_GLUE,
++
++  // Calls a function.  Operand 0 is the chain operand and operand 1
++  // is the target address.  The arguments start at operand 2.
++  // There is an optional glue operand at the end.
++  CALL,
++
++  // Bit-field instructions.
++  CLR,
++  SET,
++  EXT,
++  EXTU,
++  MAK,
++  ROT,
++  FF1,
++  FF0,
++};
++} // end namespace XADISD
++
++class XADTargetLowering : public TargetLowering {
++  const XADSubtarget &Subtarget;
++
++public:
++  explicit XADTargetLowering(const TargetMachine &TM,
++                              const XADSubtarget &STI);
++
++  // Override TargetLowering methods.
++  bool hasAndNot(SDValue X) const override { return true; }
++  const char *getTargetNodeName(unsigned Opcode) const override;
++
++  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
++
++  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
++
++  // Override required hooks.
++  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
++                               bool IsVarArg,
++                               const SmallVectorImpl<ISD::InputArg> &Ins,
++                               const SDLoc &DL, SelectionDAG &DAG,
++                               SmallVectorImpl<SDValue> &InVals) const override;
++
++  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
++                      const SmallVectorImpl<ISD::OutputArg> &Outs,
++                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
++                      SelectionDAG &DAG) const override;
++
++  SDValue LowerCall(CallLoweringInfo &CLI,
++                    SmallVectorImpl<SDValue> &InVals) const override;
++};
++
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/XADInstrFormats.td b/llvm/lib/Target/XAD/XADInstrFormats.td
+new file mode 100644
+index 000000000000..f4695436b792
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADInstrFormats.td
+@@ -0,0 +1,76 @@
++//===-- XADInstrFormats.td - XAD Instruction Formats -----*- tablegen -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++class InstXAD<dag outs, dag ins, string asm, string operands,
++               list<dag> pattern = []>
++  : Instruction {
++  bits<32> Inst;
++
++  bits<32> SoftFail = 0; // Needed by disassembler.
++
++  let Namespace = "XAD";
++  let Size = 4;
++
++  dag OutOperandList = outs;
++  dag InOperandList = ins;
++  // Construct the assembler string from template parameters asm and operands.
++  // If the instruction has a delay slot, then append ".n" to the mnemonic.
++  let AsmString = !if(!eq(operands, ""), asm,
++                      !strconcat(asm, " ", operands));
++  let Pattern = pattern;
++
++  let DecoderNamespace = "XAD";
++}
++
++class Pseudo<dag outs, dag ins, list<dag> pattern>
++  : InstXAD<outs, ins, "", "", pattern> {
++  let isCodeGenOnly       = 1;
++  let isPseudo            = 1;
++  let hasNoSchedulingInfo = 1;
++}
++
++//===----------------------------------------------------------------------===//
++// The formats follow the categories specified in the User Manual.
++//===----------------------------------------------------------------------===//
++
++// Category: Logical.
++class F_L<dag outs, dag ins, string asm, string operands,
++          list<dag> pattern = []>
++   : InstXAD<outs, ins, asm, operands, pattern> {
++  bits<5>  rd;
++  bits<5>  rs1;
++  let Inst{25-21} = rd;
++  let Inst{20-16} = rs1;
++}
++
++// Format: Logical with triadic register.
++class F_LR<bits<5> func, bits<1> comp, string asm, list<dag> pattern = []>
++   : F_L<(outs GPROpnd:$rd), (ins GPROpnd:$rs1, GPROpnd:$rs2),
++         !if(comp, !strconcat(asm, ".c"), asm), "$rd, $rs1, $rs2", pattern> {
++  bits<5>  rs2;
++  let Inst{31-26} = 0b111101;
++  let Inst{15-11} = func;
++  let Inst{10}    = comp;
++  let Inst{9-5}   = 0b00000;
++  let Inst{4-0}   = rs2;
++}
++
++// Category: Flow control.
++
++// Format: JMP/JSR
++class F_JMP<bits<5> func, string asm, list<dag> pattern = []>
++   : InstXAD<(outs), (ins GPROpnd:$rs2), asm, "$rs2", pattern> {
++  bits<5> rs2;
++
++  let Inst{31-26} = 0b111101;
++  let Inst{25-16} = 0b0000000000;
++  let Inst{15-11} = func;
++  let Inst{10}    = hasDelaySlot;
++  let Inst{9-5}   = 0b00000;
++  let Inst{4-0}   = rs2;
++}
+diff --git a/llvm/lib/Target/XAD/XADInstrInfo.cpp b/llvm/lib/Target/XAD/XADInstrInfo.cpp
+new file mode 100644
+index 000000000000..161f70420ae8
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADInstrInfo.cpp
+@@ -0,0 +1,64 @@
++//===-- XADInstrInfo.cpp - XAD instruction information ------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains the XAD implementation of the TargetInstrInfo class.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADInstrInfo.h"
++#include "XADSubtarget.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "llvm/CodeGen/LiveIntervals.h"
++#include "llvm/CodeGen/LiveVariables.h"
++#include "llvm/CodeGen/MachineBasicBlock.h"
++#include "llvm/CodeGen/MachineFrameInfo.h"
++#include "llvm/CodeGen/MachineFunction.h"
++#include "llvm/CodeGen/MachineInstr.h"
++#include "llvm/CodeGen/MachineOperand.h"
++#include "llvm/CodeGen/TargetSubtargetInfo.h"
++
++using namespace llvm;
++
++#define GET_INSTRINFO_CTOR_DTOR
++#define GET_INSTRMAP_INFO
++#include "XADGenInstrInfo.inc"
++
++#define DEBUG_TYPE "xad-ii"
++
++// Pin the vtable to this file.
++void XADInstrInfo::anchor() {}
++
++XADInstrInfo::XADInstrInfo(XADSubtarget &STI)
++    : XADGenInstrInfo(), RI(), STI(STI) {}
++
++bool XADInstrInfo::expandPostRAPseudo(
++    MachineInstr &MI) const {
++  MachineBasicBlock &MBB = *MI.getParent();
++
++  switch (MI.getOpcode()) {
++  default:
++    return false;
++  case XAD::RET: {
++    MachineInstrBuilder MIB =
++        BuildMI(MBB, &MI, MI.getDebugLoc(),
++                get(XAD::JMP))
++            .addReg(XAD::R1, RegState::Undef);
++
++    // Retain any imp-use flags.
++    for (auto &MO : MI.operands()) {
++      if (MO.isImplicit())
++        MIB.add(MO);
++    }
++    break;
++  }
++  }
++
++  // Erase the pseudo instruction.
++  MBB.erase(MI);
++  return true;
++}
+diff --git a/llvm/lib/Target/XAD/XADInstrInfo.h b/llvm/lib/Target/XAD/XADInstrInfo.h
+new file mode 100644
+index 000000000000..e110a0fedd11
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADInstrInfo.h
+@@ -0,0 +1,50 @@
++//===-- XADInstrInfo.h - XAD instruction information
++//----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains the XAD implementation of the
++// TargetInstrInfo class.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADINSTRINFO_H
++#define LLVM_LIB_TARGET_XAD_XADINSTRINFO_H
++
++#include "XADRegisterInfo.h"
++#include "llvm/CodeGen/TargetInstrInfo.h"
++
++#define GET_INSTRINFO_HEADER
++#include "XADGenInstrInfo.inc"
++
++namespace llvm {
++
++class XADSubtarget;
++
++class XADInstrInfo : public XADGenInstrInfo {
++  const XADRegisterInfo RI;
++  [[maybe_unused]] XADSubtarget &STI;
++
++  virtual void anchor();
++
++public:
++  explicit XADInstrInfo(XADSubtarget &STI);
++
++  // Return the XADRegisterInfo, which this class owns.
++  const XADRegisterInfo &getRegisterInfo() const {
++    return RI;
++  }
++
++  bool
++  expandPostRAPseudo(MachineInstr &MI) const override;
++};
++
++} // end namespace llvm
++
++#endif // LLVM_LIB_TARGET_XAD_XADINSTRINFO_H
+diff --git a/llvm/lib/Target/XAD/XADInstrInfo.td b/llvm/lib/Target/XAD/XADInstrInfo.td
+new file mode 100644
+index 000000000000..4f6f3b0a5edc
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADInstrInfo.td
+@@ -0,0 +1,55 @@
++//===-- XADInstrInfo.td - XAD Instructions ---------------*- tablegen -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file describes the XAD instructions in TableGen format.
++//
++//===----------------------------------------------------------------------===//
++
++// ---------------------------------------------------------------------------//
++// Selection DAG Nodes.
++// ---------------------------------------------------------------------------//
++
++// Selection DAG types.
++
++// These are target-independent nodes, but have target-specific formats.
++def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
++def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
++def SDT_Call         : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
++
++// Selection DAG nodes.
++
++def call             : SDNode<"XADISD::CALL", SDT_Call,
++                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
++                              SDNPVariadic]>;
++def retglue          : SDNode<"XADISD::RET_GLUE", SDTNone,
++                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
++
++// ---------------------------------------------------------------------------//
++// Logic and bit field instructions.
++// ---------------------------------------------------------------------------//
++
++// Multiclass for logical instructions with triadic registers.
++multiclass Logic<bits<5> Func, string OpcStr, SDNode OpNode> {
++  let isCommutable = 1 in
++    def rr : F_LR<Func, /*comp=*/0b0, OpcStr,
++                  [(set i32:$rd, (OpNode GPROpnd:$rs1, GPROpnd:$rs2))]>;
++  def rrc : F_LR<Func, /*comp=*/0b1, OpcStr,
++                 [(set i32:$rd, (OpNode GPROpnd:$rs1, (not GPROpnd:$rs2)))]>;
++}
++
++defm AND : Logic<0b01000, "and", and>;
++defm XOR : Logic<0b01010, "xor", xor>;
++defm OR  : Logic<0b01011, "or", or>;
++
++let isBarrier = 1, isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
++  def JMP : F_JMP<0b11000, "jmp", [(brind GPROpnd:$rs2)]>;
++}
++
++let isReturn = 1, isTerminator = 1, isBarrier = 1,
++    AsmString = "RET" in
++  def RET : Pseudo<(outs), (ins), [(retglue)]>;
+diff --git a/llvm/lib/Target/XAD/XADMCInstLower.cpp b/llvm/lib/Target/XAD/XADMCInstLower.cpp
+new file mode 100644
+index 000000000000..0c239ed03289
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADMCInstLower.cpp
+@@ -0,0 +1,40 @@
++//===-- XADMCInstLower.cpp - Lower MachineInstr to MCInst ----------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADMCInstLower.h"
++#include "llvm/CodeGen/AsmPrinter.h"
++#include "llvm/CodeGen/MachineInstr.h"
++#include "llvm/CodeGen/MachineOperand.h"
++#include "llvm/MC/MCInst.h"
++#include "llvm/MC/MCStreamer.h"
++
++using namespace llvm;
++
++MCOperand XADMCInstLower::lowerOperand(
++    const MachineOperand &MO) const {
++  switch (MO.getType()) {
++  case MachineOperand::MO_Register:
++    return MCOperand::createReg(MO.getReg());
++
++  case MachineOperand::MO_Immediate:
++    return MCOperand::createImm(MO.getImm());
++
++  default:
++    llvm_unreachable("Operand type not handled");
++  }
++}
++
++void XADMCInstLower::lower(const MachineInstr *MI,
++                            MCInst &OutMI) const {
++  OutMI.setOpcode(MI->getOpcode());
++  for (auto &MO : MI->operands()) {
++    // Ignore all implicit register operands.
++    if (!MO.isReg() || !MO.isImplicit())
++      OutMI.addOperand(lowerOperand(MO));
++  }
++}
+diff --git a/llvm/lib/Target/XAD/XADMCInstLower.h b/llvm/lib/Target/XAD/XADMCInstLower.h
+new file mode 100644
+index 000000000000..899fdf123f81
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADMCInstLower.h
+@@ -0,0 +1,32 @@
++//===-- XADMCInstLower.h - Lower MachineInstr to MCInst -------*- C++ -*--===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADMCINSTLOWER_H
++#define LLVM_LIB_TARGET_XAD_XADMCINSTLOWER_H
++
++#include "llvm/Support/Compiler.h"
++
++namespace llvm {
++class AsmPrinter;
++class MCInst;
++class MCOperand;
++class MachineInstr;
++class MachineOperand;
++class Mangler;
++
++class LLVM_LIBRARY_VISIBILITY XADMCInstLower {
++public:
++  // Lower MachineInstr MI to MCInst OutMI.
++  void lower(const MachineInstr *MI, MCInst &OutMI) const;
++
++  // Return an MCOperand for MO.
++  MCOperand lowerOperand(const MachineOperand &MO) const;
++};
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/XADRegisterInfo.cpp b/llvm/lib/Target/XAD/XADRegisterInfo.cpp
+new file mode 100644
+index 000000000000..1485a870dce0
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADRegisterInfo.cpp
+@@ -0,0 +1,59 @@
++//===-- XADRegisterInfo.cpp - XAD Register Information
++//------------------===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains the XAD implementation of the
++// TargetRegisterInfo class.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADRegisterInfo.h"
++#include "XADFrameLowering.h"
++#include "MCTargetDesc/XADMCTargetDesc.h"
++#include "llvm/ADT/BitVector.h"
++#include "llvm/CodeGen/MachineFrameInfo.h"
++#include "llvm/CodeGen/MachineFunction.h"
++#include "llvm/CodeGen/Register.h"
++#include "llvm/CodeGen/TargetInstrInfo.h"
++#include "llvm/MC/MCRegister.h"
++
++using namespace llvm;
++
++#define GET_REGINFO_TARGET_DESC
++#include "XADGenRegisterInfo.inc"
++
++XADRegisterInfo::XADRegisterInfo()
++    : XADGenRegisterInfo(XAD::R1) {}
++
++const MCPhysReg *XADRegisterInfo::getCalleeSavedRegs(
++    const MachineFunction *MF) const {
++  return CSR_XAD_SaveList;
++}
++
++BitVector XADRegisterInfo::getReservedRegs(
++    const MachineFunction &MF) const {
++  BitVector Reserved(getNumRegs());
++
++  // R31 is the stack pointer.
++  Reserved.set(XAD::R31);
++
++  return Reserved;
++}
++
++bool XADRegisterInfo::eliminateFrameIndex(
++    MachineBasicBlock::iterator MI, int SPAdj,
++    unsigned FIOperandNum, RegScavenger *RS) const {
++  return false;
++}
++
++Register XADRegisterInfo::getFrameRegister(
++    const MachineFunction &MF) const {
++  return XAD::R30;
++}
+diff --git a/llvm/lib/Target/XAD/XADRegisterInfo.h b/llvm/lib/Target/XAD/XADRegisterInfo.h
+new file mode 100644
+index 000000000000..69015003b5db
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADRegisterInfo.h
+@@ -0,0 +1,46 @@
++//===-- XADRegisterInfo.h - XAD Register Information
++//Impl -----*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License
++// v2.0 with LLVM Exceptions. See
++// https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH
++// LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains the XAD implementation of the
++// TargetRegisterInfo class.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADREGISTERINFO_H
++#define LLVM_LIB_TARGET_XAD_XADREGISTERINFO_H
++
++#define GET_REGINFO_HEADER
++#include "XADGenRegisterInfo.inc"
++
++namespace llvm {
++
++struct XADRegisterInfo : public XADGenRegisterInfo {
++  XADRegisterInfo();
++
++  /// Code Generation virtual methods...
++  const MCPhysReg *getCalleeSavedRegs(
++      const MachineFunction *MF) const override;
++
++  BitVector getReservedRegs(
++      const MachineFunction &MF) const override;
++
++  bool eliminateFrameIndex(
++      MachineBasicBlock::iterator II, int SPAdj,
++      unsigned FIOperandNum,
++      RegScavenger *RS = nullptr) const override;
++
++  Register getFrameRegister(
++      const MachineFunction &MF) const override;
++};
++
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/XADRegisterInfo.td b/llvm/lib/Target/XAD/XADRegisterInfo.td
+new file mode 100644
+index 000000000000..bb296a487da8
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADRegisterInfo.td
+@@ -0,0 +1,56 @@
++//===-- XADRegisterInfo.td - XAD Register definitions ----*- tablegen -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++class XADReg<bits<5> Enc, string n> : Register<n> {
++  let HWEncoding{15-5} = 0;
++  let HWEncoding{4-0} = Enc;
++  let Namespace = "XAD";
++}
++
++class XADCRReg<bits<6> Enc, string n> : Register<n> {
++  let HWEncoding{15-6} = 0;
++  let HWEncoding{5-0} = Enc;
++  let Namespace = "XAD";
++}
++
++class XADRegisterClass<list<ValueType> types, int size, int alignment,
++                        dag regList, int copycost = 1>
++  : RegisterClass<"XAD", types, alignment, regList> {
++      let Size = size;
++      let CopyCost = copycost;
++}
++
++class XADRegisterOperand<RegisterClass RC> : RegisterOperand<RC> {
++  let DecoderMethod = "decode"#RC#"RegisterClass";
++}
++
++let Namespace = "XAD" in {
++  def sub_hi : SubRegIndex<32, 0>;
++  def sub_lo : SubRegIndex<32, 32>;
++}
++
++// General-purpose registers
++foreach I = 0-31 in {
++  let isConstant = !eq(I, 0) in
++    def R#I : XADReg<I, "r"#I>;
++}
++
++def GPR : XADRegisterClass<[i32, f32], 32, 32,
++                            (add (sequence "R%u", 0, 31))>;
++def GPROpnd : XADRegisterOperand<GPR> {
++  let GIZeroRegister = R0;
++}
++
++// Register class representing a pair of even-odd GRs.
++def GRPair : RegisterTuples<[sub_hi, sub_lo],
++                            [(add (sequence "R%u", 0, 30, 2)),
++                             (add (sequence "R%u", 1, 31, 2))]>;
++
++def GPR64 : XADRegisterClass<[i64, f64, v8i8, v4i16, v2i32], 64, 32,
++                              (add GRPair), 2>;
++def GPR64Opnd : XADRegisterOperand<GPR64>;
+diff --git a/llvm/lib/Target/XAD/XADSubtarget.cpp b/llvm/lib/Target/XAD/XADSubtarget.cpp
+new file mode 100644
+index 000000000000..321908b6da85
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADSubtarget.cpp
+@@ -0,0 +1,36 @@
++//===-- XADSubtarget.cpp - XAD Subtarget Information ----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements the XAD specific subclass of TargetSubtargetInfo.
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADSubtarget.h"
++#include "XADTargetMachine.h"
++#include "llvm/MC/TargetRegistry.h"
++#include "llvm/TargetParser/Triple.h"
++#include <string>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "xad-subtarget"
++
++#define GET_SUBTARGETINFO_TARGET_DESC
++#define GET_SUBTARGETINFO_CTOR
++#include "XADGenSubtargetInfo.inc"
++
++void XADSubtarget::anchor() {}
++
++XADSubtarget::XADSubtarget(const Triple &TT,
++                             const std::string &CPU,
++                             const std::string &FS,
++                             const TargetMachine &TM)
++    : XADGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU,
++                           FS),
++      InstrInfo(*this), TLInfo(TM, *this),
++      FrameLowering() {}
+diff --git a/llvm/lib/Target/XAD/XADSubtarget.h b/llvm/lib/Target/XAD/XADSubtarget.h
+new file mode 100644
+index 000000000000..77f8f4959c14
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADSubtarget.h
+@@ -0,0 +1,77 @@
++//===-- XADSubtarget.h - Define Subtarget for XAD -------------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file declares the XAD specific subclass of TargetSubtargetInfo.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADSUBTARGET_H
++#define LLVM_LIB_TARGET_XAD_XADSUBTARGET_H
++
++#include "XADFrameLowering.h"
++#include "XADISelLowering.h"
++#include "XADInstrInfo.h"
++#include "XADRegisterInfo.h"
++#include "llvm/CodeGen/RegisterBankInfo.h"
++#include "llvm/CodeGen/TargetFrameLowering.h"
++#include "llvm/CodeGen/TargetSubtargetInfo.h"
++#include "llvm/IR/DataLayout.h"
++#include <string>
++
++#define GET_SUBTARGETINFO_HEADER
++#include "XADGenSubtargetInfo.inc"
++
++namespace llvm {
++class StringRef;
++class TargetMachine;
++
++class XADSubtarget : public XADGenSubtargetInfo {
++  virtual void anchor();
++
++  XADInstrInfo InstrInfo;
++  XADTargetLowering TLInfo;
++  XADFrameLowering FrameLowering;
++
++public:
++  XADSubtarget(const Triple &TT,
++                const std::string &CPU,
++                const std::string &FS,
++                const TargetMachine &TM);
++
++// Getters for SubtargetFeatures defined in tablegen
++#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT,    \
++                                GETTER)                \
++  bool GETTER() const { return ATTRIBUTE; }
++#include "XADGenSubtargetInfo.inc"
++
++  // Automatically generated by tblgen.
++  void ParseSubtargetFeatures(StringRef CPU,
++                              StringRef TuneCPU,
++                              StringRef FS);
++
++  const TargetFrameLowering *
++  getFrameLowering() const override {
++    return &FrameLowering;
++  }
++  const XADInstrInfo *getInstrInfo() const override {
++    return &InstrInfo;
++  }
++  const XADRegisterInfo *
++  getRegisterInfo() const override {
++    return &InstrInfo.getRegisterInfo();
++  }
++  const XADTargetLowering *
++  getTargetLowering() const override {
++    return &TLInfo;
++  }
++
++};
++
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/Target/XAD/XADTargetMachine.cpp b/llvm/lib/Target/XAD/XADTargetMachine.cpp
+new file mode 100644
+index 000000000000..1afcd08cf8a9
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADTargetMachine.cpp
+@@ -0,0 +1,125 @@
++//===-- XADTargetMachine.cpp - Define TargetMachine for XAD ---*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++//
++//===----------------------------------------------------------------------===//
++
++#include "XADTargetMachine.h"
++#include "TargetInfo/XADTargetInfo.h"
++#include "XAD.h"
++#include "llvm/CodeGen/Passes.h"
++#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
++#include "llvm/CodeGen/TargetPassConfig.h"
++#include "llvm/IR/LegacyPassManager.h"
++#include "llvm/MC/TargetRegistry.h"
++
++using namespace llvm;
++
++extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXADTarget() {
++  // Register the target.
++  RegisterTargetMachine<XADTargetMachine> X(getTheXADTarget());
++  auto &PR = *PassRegistry::getPassRegistry();
++  initializeXADDAGToDAGISelPass(PR);
++}
++
++namespace {
++// TODO: Check.
++std::string computeDataLayout(const Triple &TT, StringRef CPU, StringRef FS) {
++  std::string Ret;
++
++  // Big endian.
++  Ret += "E";
++
++  // Data mangling.
++  Ret += DataLayout::getManglingComponent(TT);
++
++  // Pointers are 32 bit.
++  Ret += "-p:32:32:32";
++
++  // All scalar types are naturally aligned.
++  Ret += "-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64";
++
++  // Floats and doubles are also naturally aligned.
++  Ret += "-f32:32:32-f64:64:64";
++
++  // We prefer 16 bits of aligned for all globals; see
++  // above.
++  Ret += "-a:8:16";
++
++  // Integer registers are 32bits.
++  Ret += "-n32";
++
++  return Ret;
++}
++} // namespace
++
++/// Create an XAD architecture model.
++XADTargetMachine::XADTargetMachine(const Target &T, const Triple &TT,
++                                   StringRef CPU, StringRef FS,
++                                   const TargetOptions &Options,
++                                   std::optional<Reloc::Model> RM,
++                                   std::optional<CodeModel::Model> CM,
++                                   CodeGenOpt::Level OL, bool JIT)
++    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
++                        !RM ? Reloc::Static : *RM,
++                        getEffectiveCodeModel(CM, CodeModel::Medium), OL),
++      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
++  initAsmInfo();
++}
++
++XADTargetMachine::~XADTargetMachine() {}
++
++const XADSubtarget *
++XADTargetMachine::getSubtargetImpl(const Function &F) const {
++  Attribute CPUAttr = F.getFnAttribute("target-cpu");
++  Attribute FSAttr = F.getFnAttribute("target-features");
++
++  std::string CPU = !CPUAttr.hasAttribute(Attribute::None)
++                        ? CPUAttr.getValueAsString().str()
++                        : TargetCPU;
++  std::string FS = !FSAttr.hasAttribute(Attribute::None)
++                       ? FSAttr.getValueAsString().str()
++                       : TargetFS;
++
++  auto &I = SubtargetMap[CPU + FS];
++  if (!I) {
++    // This needs to be done before we create a new
++    // subtarget since any creation will depend on the
++    // TM and the code generation flags on the function
++    // that reside in TargetOptions.
++    resetTargetOptions(F);
++    I = std::make_unique<XADSubtarget>(TargetTriple, CPU, FS, *this);
++  }
++
++  return I.get();
++}
++
++namespace {
++/// XAD Code Generator Pass Configuration Options.
++class XADPassConfig : public TargetPassConfig {
++public:
++  XADPassConfig(XADTargetMachine &TM, PassManagerBase &PM)
++      : TargetPassConfig(TM, PM) {}
++
++  bool addInstSelector() override;
++  void addPreEmitPass() override;
++};
++} // namespace
++
++TargetPassConfig *XADTargetMachine::createPassConfig(PassManagerBase &PM) {
++  return new XADPassConfig(*this, PM);
++}
++
++bool XADPassConfig::addInstSelector() {
++  addPass(createXADISelDag(getTM<XADTargetMachine>(), getOptLevel()));
++  return false;
++}
++
++void XADPassConfig::addPreEmitPass() {
++  // TODO Add pass for div-by-zero check.
++}
+diff --git a/llvm/lib/Target/XAD/XADTargetMachine.h b/llvm/lib/Target/XAD/XADTargetMachine.h
+new file mode 100644
+index 000000000000..c5e3accf03ef
+--- /dev/null
++++ b/llvm/lib/Target/XAD/XADTargetMachine.h
+@@ -0,0 +1,50 @@
++//===-- XADTargetMachine.h - Define TargetMachine for XAD -----*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file declares the XAD specific subclass of TargetMachine.
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_LIB_TARGET_XAD_XADTARGETMACHINE_H
++#define LLVM_LIB_TARGET_XAD_XADTARGETMACHINE_H
++
++#include "XADSubtarget.h"
++#include "llvm/Target/TargetLoweringObjectFile.h"
++#include "llvm/Target/TargetMachine.h"
++
++namespace llvm {
++
++class XADTargetMachine : public LLVMTargetMachine {
++  std::unique_ptr<TargetLoweringObjectFile> TLOF;
++  mutable StringMap<std::unique_ptr<XADSubtarget>>
++      SubtargetMap;
++
++public:
++  XADTargetMachine(const Target &T, const Triple &TT,
++                    StringRef CPU, StringRef FS,
++                    const TargetOptions &Options,
++                    std::optional<Reloc::Model> RM,
++                    std::optional<CodeModel::Model> CM,
++                    CodeGenOpt::Level OL, bool JIT);
++  ~XADTargetMachine() override;
++
++  const XADSubtarget *
++  getSubtargetImpl(const Function &) const override;
++
++  TargetPassConfig *
++  createPassConfig(PassManagerBase &PM) override;
++
++  TargetLoweringObjectFile *
++  getObjFileLowering() const override {
++    return TLOF.get();
++  }
++};
++
++} // end namespace llvm
++
++#endif
+diff --git a/llvm/lib/TargetParser/Triple.cpp b/llvm/lib/TargetParser/Triple.cpp
+index a3d6a06af976..d6d54cdfd30a 100644
+--- a/llvm/lib/TargetParser/Triple.cpp
++++ b/llvm/lib/TargetParser/Triple.cpp
+@@ -48,6 +48,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
+   case loongarch32:    return "loongarch32";
+   case loongarch64:    return "loongarch64";
+   case m68k:           return "m68k";
++  case xad:            return "xad";
+   case mips64:         return "mips64";
+   case mips64el:       return "mips64el";
+   case mips:           return "mips";
+@@ -113,6 +114,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
+   case ppcle:       return "ppc";
+ 
+   case m68k:        return "m68k";
++  case xad:         return "xad";
+ 
+   case mips:
+   case mipsel:
+@@ -342,6 +344,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
+     .Case("avr", avr)
+     .StartsWith("bpf", BPFArch)
+     .Case("m68k", m68k)
++    .Case("xad", xad)
+     .Case("mips", mips)
+     .Case("mipsel", mipsel)
+     .Case("mips64", mips64)
+@@ -490,6 +493,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
+     .Case("thumbeb", Triple::thumbeb)
+     .Case("avr", Triple::avr)
+     .Case("m68k", Triple::m68k)
++    .Case("xad", Triple::xad)
+     .Case("msp430", Triple::msp430)
+     .Cases("mips", "mipseb", "mipsallegrex", "mipsisa32r6",
+            "mipsr6", Triple::mips)
+@@ -826,6 +830,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
+   case Triple::loongarch32:
+   case Triple::loongarch64:
+   case Triple::m68k:
++  case Triple::xad:
+   case Triple::mips64:
+   case Triple::mips64el:
+   case Triple::mips:
+@@ -1412,6 +1417,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+   case llvm::Triple::le32:
+   case llvm::Triple::loongarch32:
+   case llvm::Triple::m68k:
++  case llvm::Triple::xad:
+   case llvm::Triple::mips:
+   case llvm::Triple::mipsel:
+   case llvm::Triple::nvptx:
+@@ -1503,6 +1509,7 @@ Triple Triple::get32BitArchVariant() const {
+   case Triple::le32:
+   case Triple::loongarch32:
+   case Triple::m68k:
++  case Triple::xad:
+   case Triple::mips:
+   case Triple::mipsel:
+   case Triple::nvptx:
+@@ -1567,6 +1574,7 @@ Triple Triple::get64BitArchVariant() const {
+   case Triple::kalimba:
+   case Triple::lanai:
+   case Triple::m68k:
++  case Triple::xad:
+   case Triple::msp430:
+   case Triple::r600:
+   case Triple::shave:
+@@ -1713,6 +1721,7 @@ Triple Triple::getLittleEndianArchVariant() const {
+   case Triple::sparcv9:
+   case Triple::systemz:
+   case Triple::m68k:
++  case Triple::xad:
+ 
+   // ARM is intentionally unsupported here, changing the architecture would
+   // drop any arch suffixes.
+diff --git a/llvm/utils/TableGen/SubtargetEmitter.cpp b/llvm/utils/TableGen/SubtargetEmitter.cpp
+index e4eb23649e96..e204646545f2 100644
+--- a/llvm/utils/TableGen/SubtargetEmitter.cpp
++++ b/llvm/utils/TableGen/SubtargetEmitter.cpp
+@@ -1933,7 +1933,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
+   if (NumProcs)
+     OS << Target << "SubTypeKV, ";
+   else
+-    OS << "None, ";
++    OS << "std::nullopt, ";
+   OS << '\n'; OS.indent(22);
+   OS << Target << "WriteProcResTable, "
+      << Target << "WriteLatencyTable, "
+@@ -2026,7 +2026,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
+   if (NumProcs)
+     OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
+   else
+-    OS << "None, ";
++    OS << "std::nullopt, ";
+   OS << '\n'; OS.indent(24);
+   OS << Target << "WriteProcResTable, "
+      << Target << "WriteLatencyTable, "
+-- 
+2.46.0
+
